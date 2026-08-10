@@ -1,13 +1,14 @@
 ---
-tags: [executive-intake]
-verbatim: "Can we get Client X a live dashboard of the benchmark comparisons before their QBR?"
-interpreted: "Client-facing dashboard surfacing S0 benchmark results for Client X's model shortlist, ready before their QBR."
+tags:
+  - executive-intake
+verbatim: Can we get Client X a live dashboard of the benchmark comparisons before their QBR?
+interpreted: Client-facing dashboard surfacing S0 benchmark results for Client X's model shortlist, ready before their QBR.
 logged: 2026-08-10
 logged_by: R. Kashyap
 roi: 4
 strategic: 5
 impact: 5
-urgency: 4
+urgency: 5
 culture: 3
 complexity: 3
 slot: Now
