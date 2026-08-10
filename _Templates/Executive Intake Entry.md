@@ -19,34 +19,44 @@ status: Awaiting scoring
 
 > 
 
-*Exact words. No cleaning up. If you're paraphrasing, write `[paraphrase]`.*
-*Copy the same line into the `verbatim` property above so it shows on the tracker.*
+**This is the only part you fill in.** Exact words, no cleaning up. If you're paraphrasing, write `[paraphrase]`.
+Copy the same line into the `verbatim` property above so it shows on the tracker.
 
-## Interpreted requirement
-
-*What we believe is actually being asked for, in one sentence. Name the deliverable, not the topic. Copy it into the `interpreted` property too.*
-
-**Qualifiers heard:** *"if it's cheap", "eventually", "before the QBR" — the bits that vanish in paraphrase and drive Urgency and Complexity.*
+Include the throwaway qualifiers — *"if it's cheap"*, *"eventually"*, *"before the QBR"*. Those are what get lost, and they drive Urgency and Complexity.
 
 ---
 
-*Everything below waits for the weekly sync. Stop here on the day you hear the ask.*
+## Then hand it to Claude
+
+Save this note, then run:
+
+```
+/score-ask <name of this note>
+```
+
+Claude researches the ask, asks you anything commercial it can't verify, writes the interpreted requirement, scores all six dimensions with evidence, proposes a slot, and publishes it to the ranking.
+
+**Everything below is filled by Claude. Leave it alone.**
+
+---
+
+## Interpreted requirement
+
+*(Claude fills this.)*
+
+**Qualifiers heard:**
 
 ## Research pass — one line of evidence per score
 
-Anchors: [[Scoring Rubric]]. No evidence for a score → score lower, don't guess.
+Anchors: [[Scoring Rubric]].
 
 - **Revenue ROI —**
 - **Strategic Alignment —**
 - **Client Impact —**
-- **Urgency —** *(named external date? if none, cap at 2)*
+- **Urgency —**
 - **Culture —**
-- **Complexity —** *(honest number; deflating this breaks the instrument)*
+- **Complexity —**
 
 ## Open questions
 
 - 
-
----
-
-**When scored:** fill all six number properties (1–5) above, then change `status` to `Scored`. The Overall Score computes itself and the row sorts into the ranking. Never type a total.
