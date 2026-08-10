@@ -51,7 +51,9 @@ views:
       - logged
     sort:
       - property: formula.overall
-        direction: DESC
+        direction: ASC
+      - property: logged
+        direction: ASC
   - type: table
     name: Awaiting scoring
     filters:
