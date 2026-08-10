@@ -1,0 +1,67 @@
+filters:
+  and:
+    - file.hasTag("executive-intake")
+    - file.name != "Intake Entry Template"
+formulas:
+  overall: if(note.roi && note.strategic && note.impact && note.urgency && note.culture && note.complexity, (0.30 * note.roi + 0.20 * note.strategic + 0.20 * note.impact + 0.15 * note.urgency + 0.15 * note.culture - 0.25 * note.complexity).round(2), "—")
+properties:
+  formula.overall:
+    displayName: Overall Score
+  verbatim:
+    displayName: Verbatim (as said)
+  interpreted:
+    displayName: Interpreted requirement
+  roi:
+    displayName: Revenue ROI
+  strategic:
+    displayName: Strategic Alignment
+  impact:
+    displayName: Client Impact
+  urgency:
+    displayName: Urgency
+  culture:
+    displayName: Culture
+  complexity:
+    displayName: Complexity (penalty)
+  slot:
+    displayName: Slot
+  status:
+    displayName: Status
+  logged:
+    displayName: Logged
+  logged_by:
+    displayName: Logged by
+views:
+  - type: table
+    name: Priority ranking
+    filters:
+      and:
+        - status != "Awaiting scoring"
+    order:
+      - file.name
+      - formula.overall
+      - slot
+      - status
+      - roi
+      - strategic
+      - impact
+      - urgency
+      - culture
+      - complexity
+      - logged
+    sort:
+      - property: formula.overall
+        direction: DESC
+  - type: table
+    name: Awaiting scoring
+    filters:
+      and:
+        - status == "Awaiting scoring"
+    order:
+      - file.name
+      - verbatim
+      - logged
+      - logged_by
+    sort:
+      - property: logged
+        direction: ASC

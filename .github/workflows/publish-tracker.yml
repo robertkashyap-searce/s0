@@ -1,0 +1,39 @@
+name: Publish Pipeline Tracker
+
+# Renders and deploys entirely on GitHub's runners — no laptop involved.
+# Push a change to an intake note (Obsidian Git does this automatically) and the
+# live site updates a minute or so later, whether or not the Mac is awake.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'S0/Internal Builds/Pipeline Tracker/**'
+      - '.tools/render-tracker.rb'
+      - '.github/workflows/publish-tracker.yml'
+  workflow_dispatch: # manual re-publish button in the Actions tab
+
+concurrency:
+  group: publish-tracker
+  cancel-in-progress: true # a burst of pushes deploys once, from the newest state
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest # ships with Ruby; the renderer needs no gems
+    steps:
+      - uses: actions/checkout@v4
+
+      # Gate: never deploy a ranking whose arithmetic doesn't verify.
+      - name: Verify the scoring model
+        run: ruby '.tools/render-tracker.rb' --check
+
+      - name: Render the site
+        run: ruby '.tools/render-tracker.rb'
+
+      # Full-directory upload, so deleted or retracted asks disappear from the site.
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy .tracker-site --project-name=s0-pipeline-tracker

@@ -1,0 +1,13 @@
+# Obsidian workspace state — rewritten constantly as you move panes around.
+# Left tracked, every pane switch would auto-commit and trigger a deploy.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.obsidian/plugins/*/data.json
+
+# Generated site output — rebuilt by CI on every push; never a source of truth.
+.tracker-site/
+
+# Obsidian's local trash and macOS cruft
+.trash/
+.DS_Store
