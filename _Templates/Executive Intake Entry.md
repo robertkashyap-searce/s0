@@ -4,7 +4,7 @@ tags:
 verbatim: 
 interpreted: 
 logged: {{date}}
-logged_by: R. Kashyap
+logged_by: 
 roi: 
 strategic: 
 impact: 
