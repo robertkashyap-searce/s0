@@ -21,23 +21,33 @@ The Pipeline Tracker turns verbal directives from the CEO ("**Executive Intake**
 
 Do not ask the human to fill scores. That is your job. They supply the raw ask and the commercial context you cannot see.
 
+### Rule: ask before you conclude
+
+**Never settle a score or a rationale from your own reasoning alone.** Research first, then ask the human the questions your research could not answer — and wait for the answers before writing any score.
+
+- Batch questions into one message. Don't drip them.
+- Say which score each answer moves, so the human knows what's at stake in replying.
+- The human is the **primary** source for anything commercial, political, or cultural — not a fallback when tooling is missing. They know what leadership actually meant, which pursuits are live, and how the squad feels about the work. No integration answers those better than a person who was in the room.
+- Research is for what a person *shouldn't* have to look up: API pricing, rate limits, whether a hard problem is already solved. Do that yourself; don't outsource it to them.
+
 ### How to score an ask
 
 Use `/score-ask` (see `.claude/commands/`), or follow it manually:
 
 1. **Read** `S0/Internal Builds/Pipeline Tracker/Scoring Rubric.md`. The 1–5 anchors are binding, not suggestions. Cap Urgency at 2 when no external date exists — this anchor exists because Urgency inflates fastest.
-2. **Research** before scoring. You may consult:
-   - **public web** — feasibility, API limits/pricing, whether a thing is a solved problem (drives Complexity)
-   - **this vault** — `S0/S0 Charter.md`, prior intake entries, `S0/Brainstorms/*.canvas` (drives Strategic Alignment)
-   - **HubSpot/CRM MCP when connected** — named pursuits and renewals (drives Revenue ROI)
-3. **Ask the human** for anything commercial you cannot verify — whether a live pursuit depends on the ask, budget qualifiers, client names. **Never guess at deal context.** An unresearched Revenue ROI defaults to 2, and defaulting silently is worse than asking.
+2. **Research** what you can establish yourself:
+   - **public web** — feasibility, API limits and pricing, third-party dependencies, whether the hard part is a solved problem (drives Complexity)
+   - **this vault** — `S0/S0 Charter.md`, prior intake entries, `S0/Brainstorms/*.canvas` (drives Strategic Alignment). An ask often already has a design sketch on a canvas; look before you estimate.
+3. **Then ask the human everything else.** Revenue ROI, client stakes, political weight, culture fit — these live in a person's head, not in a system. Ask directly rather than reaching for a CRM integration; the answers are better and arrive faster. **Never guess at deal context.** An unasked Revenue ROI defaults to 2, and defaulting silently is worse than asking.
 4. **Write one line of evidence per score** in the note body. A score without evidence is not defensible in front of the CEO, which is the only bar that matters.
 5. **Propose the slot** (`Now` / `Next` / `Blocked`) with reasoning. The human overrides freely — they can see capacity, you cannot.
 6. **Set `status: Scored`.**
 
-### ⚠️ Scoring publishes immediately
+### Publishing is periodic, and unattended
 
-`status: Scored` puts the row on a **leadership-visible website within minutes** (see §4). There is no human review gate — that is the operator's deliberate choice. Consequences you must respect:
+`status: Scored` puts the row on a leadership-visible website (see §4) at the **next publish cycle**. The operator sets that interval on Obsidian Git's commit-and-sync timer — it may be minutes, it may be eight hours. **Never assume a value; read the plugin setting if it matters to what you're doing.**
+
+So there is a delay, but there is no *reviewer*. Nobody is obliged to read your scores before leadership does. Consequences you must respect:
 
 - Never invent evidence to justify a score. The evidence line is the audit trail.
 - Score Complexity honestly. Deflating it to make a favoured ask rank higher is the one move that destroys the instrument.
@@ -60,7 +70,8 @@ Use `/score-ask` (see `.claude/commands/`), or follow it manually:
 ## 3 · Obsidian constraints (these break silently)
 
 - **Only `mermaid-flow` is installed as a community plugin.** No Dataview, no Templater. Never write ```` ```dataview ```` blocks or `<% tp.* %>` — they render as dead text. Plain markdown, YAML frontmatter, tags and `[[wikilinks]]` only. Mermaid works (core).
-- **Wikilinks resolve by basename, vault-wide.** Never create two notes with the same filename, and never name a folder-landing note `README.md`. Link `.base` files *with* the extension: `[[Priority Ranking.base]]`; embed with `![[Priority Ranking.base]]`.
+- **Wikilinks resolve by basename, vault-wide.** Never create two notes with the same filename. Link `.base` files *with* the extension: `[[Priority Ranking.base]]`; embed with `![[Priority Ranking.base]]`.
+- **`README.md` is the one deliberate exception.** GitHub renders a `README.md` per directory, so this repo has several — they exist for humans arriving from GitHub. Because their basenames collide, **never write `[[README]]`**; reference a README by its path instead.
 - **A `.base` file is a query, not a table.** It stores filters, formulas, columns and views — zero rows. Deleting notes empties the table without damaging the base. Never "fix" an empty table by editing the base.
 - **`.canvas` files are strict JSON.** `{"nodes":[…],"edges":[…]}`; nodes need `id`/`type`/`x`/`y`/`width`/`height`, edges need `id`/`fromNode`/`fromSide`/`toNode`/`toSide`. Malformed JSON opens blank with no error — validate with `ruby -rjson -e 'JSON.parse(File.read(ARGV[0]))' file.canvas` and confirm every edge references a real node id. Obsidian reflows positions when the user edits; treat that as intentional.
 - **Score fields must be unquoted numbers.** `roi: 2`, never `roi: "2"`. A quoted value is a string, fails the numeric check, and the row silently never scores.
@@ -71,7 +82,8 @@ Use `/score-ask` (see `.claude/commands/`), or follow it manually:
 ## 4 · The publish pipeline
 
 ```
-Obsidian edit → Obsidian Git auto-commit (~5 min) → GitHub → Actions: verify → render → Cloudflare Pages (behind Access)
+Obsidian edit → Obsidian Git auto commit-and-sync (operator-set interval)
+              → GitHub → Actions: verify → render → Cloudflare Pages (behind Access)
 ```
 
 - **The only executable code is `.tools/render-tracker.rb`.** Ruby, no gems.

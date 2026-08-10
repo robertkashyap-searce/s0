@@ -17,13 +17,14 @@ Read the note, then `S0/Internal Builds/Pipeline Tracker/Scoring Rubric.md`. The
 **2 · Write the `interpreted` requirement.**
 One sentence naming the deliverable, not the topic. Put it in both the frontmatter and the body.
 
-**3 · Research before scoring — do not score from intuition.**
+**3 · Research what you can establish yourself — don't make the human look things up.**
 - **Public web** for feasibility: API pricing and limits, third-party dependencies, whether the hard part is actually a solved problem. This is what makes Complexity honest.
-- **This vault** for alignment: `S0/S0 Charter.md` (which workstream does it advance?), prior intake entries, `S0/Brainstorms/*.canvas` (the ask may already have a design sketch — check).
-- **HubSpot/CRM MCP if connected** for Revenue ROI: is there a named pursuit or renewal?
+- **This vault** for alignment: `S0/S0 Charter.md` (which workstream does it advance?), prior intake entries, `S0/Brainstorms/*.canvas` (the ask may already have a design sketch — check before you estimate).
 
-**4 · Ask the human what you cannot verify.**
-Batch the questions; don't drip them. Ask about anything commercial — whether a live pursuit depends on this, budget constraints, client names, internal deadlines. **Never guess at deal context.** Say plainly which score each answer moves.
+**4 · Then ask the human everything research can't settle — and wait for the answers.**
+Revenue ROI, client stakes, political weight, culture fit. Ask the person; don't reach for a CRM integration. Someone who was in the room answers better and faster than any connector.
+
+Batch the questions into one message, and state which score each answer moves so they know what's at stake in replying. **Never guess at deal context — and never conclude a score before the answers arrive.**
 
 **5 · Score all six, with one line of evidence each.**
 Write the evidence into the note body under "Research pass". A score whose evidence you cannot state is not a score — go research it or score lower. Reminders:
@@ -41,8 +42,8 @@ Write the evidence into the note body under "Research pass". A score whose evide
 
 - Run `ruby .tools/render-tracker.rb --check` — must print `OK`.
 - Run `ruby .tools/render-tracker.rb` and confirm the row appears in the ranking section with the total you calculated by hand. If they disagree, the frontmatter is wrong (usually quoted numbers).
-- Tell the human the score, the reasoning in two lines, and **that it is now live** on the leadership-visible site.
+- Tell the human the score, the reasoning in two lines, and that it will reach the leadership-visible site at **the next publish cycle** (the operator sets that interval — don't state a number you haven't checked).
 
 ## Stop and ask instead of publishing if
 
-You are uncertain enough that a wrong score would mislead leadership. There is no review gate between you and the CEO's screen — that is a deliberate choice by the operator, and it means the burden of not publishing a guess sits with you.
+You are uncertain enough that a wrong score would mislead leadership. Publishing is delayed but **unreviewed** — nobody is obliged to read your scores before leadership does, so the burden of not shipping a guess sits with you.
