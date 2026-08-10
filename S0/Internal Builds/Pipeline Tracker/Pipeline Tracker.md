@@ -94,7 +94,7 @@ An ask keeps its score while its slot moves. That's what lets you say "not this 
 
 `Overall = 4.25 − 0.75 = 3.50` → strong band. Harness already exists, so it's mostly a presentation layer → **Now**.
 
-Note what the rubric caught: the QBR is ten days out, so Urgency is a 4, not the 5 it felt like in the room. One anchor, one point, and the ranking stays honest. Full write-up: [[Example — Benchmark Dashboard for Client QBR]].
+Note what the rubric caught: had the QBR been ten days out rather than imminent, Urgency would be a 4, not the 5 it felt like in the room — and the total drops to 3.50. One anchor, one point, and the ranking stays honest.
 
 ## The live tracker
 
@@ -104,7 +104,7 @@ Two views: **Priority ranking** (scored items, sorted by Overall Score, highest 
 
 ## How to run it
 
-1. **New ask** → copy [[Intake Entry Template]] into `Intake/`, rename, fill verbatim + interpreted. Same day. Leave scores empty; it lands in the tracker's **Awaiting scoring** view, oldest first.
+1. **New ask** → create a note in `Intake/`, run **Templates: Insert template** → *Executive Intake Entry*, fill verbatim + interpreted. Same day. Leave scores empty; it lands in the tracker's **Awaiting scoring** view, oldest first.
 2. **Weekly sync** → research pass, then score. Status moves to `Scored` and the row joins the ranked view automatically.
 3. **Read the ranking** → open [[Priority Ranking.base]]. Sorted by Overall Score, highest first, no manual re-sorting.
 4. **Set slots** → assign Now / Next / Blocked against current capacity. Don't touch scores.
@@ -121,8 +121,8 @@ Two views: **Priority ranking** (scored items, sorted by Overall Score, highest 
 |---|---|
 | [[Priority Ranking.base]] | The live tracker. Auto-computed, auto-sorted. |
 | [[Scoring Rubric]] | 1–5 anchors per dimension. The reason two people score alike. |
-| [[Intake Entry Template]] | Copy this for every new ask. |
-| `Intake/` | One note per ask. Each note is one row. |
+| [[Executive Intake Entry]] | The template, in `_Templates/`. Inserted via **Templates: Insert template**. |
+| `Intake/` | One note per ask. Each note is one row. Data only — no templates, no examples. |
 | [[Publishing]] | Read-only web view for leadership. Setup + the access-control gate. |
 
 ## If the Overall column shows an error

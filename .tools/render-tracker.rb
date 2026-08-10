@@ -55,7 +55,9 @@ def load_rows(weights)
   # .map{}.compact rather than filter_map — Ruby 2.6 compatibility
   Dir.glob(File.join(INTAKE, '*.md')).sort.map do |path|
     name = File.basename(path, '.md')
-    next if name.start_with?('Intake Entry Template') # query definition, not data
+    # Templates live in <vault>/_Templates and are never read here. This guard
+    # only catches a template copied into Intake/ but not yet renamed.
+    next if name.start_with?('Executive Intake Entry')
 
     fm = YAML.safe_load(File.read(path).split(/^---\s*$/)[1].to_s,
                         permitted_classes: [Date], aliases: true) || {}
