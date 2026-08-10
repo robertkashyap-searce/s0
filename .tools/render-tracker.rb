@@ -40,6 +40,16 @@ def load_weights
   end
 end
 
+# --- scoring -----------------------------------------------------------------
+# Single code path for the score, so --check can exercise it with a fixture
+# instead of asserting against a live note. Asserting on vault data made any
+# legitimate re-score fail CI and block the deploy.
+def compute_overall(scores, weights)
+  return nil unless scores.values.all? { |v| v.is_a?(Numeric) }
+
+  scores.sum { |f, v| weights[f] * v }.round(2)
+end
+
 # --- rows --------------------------------------------------------------------
 def load_rows(weights)
   # .map{}.compact rather than filter_map — Ruby 2.6 compatibility
@@ -52,7 +62,7 @@ def load_rows(weights)
     next unless fm['tags'].to_a.include?('executive-intake')
 
     scores = FIELDS.to_h { |f| [f, fm[f]] }
-    overall = scores.values.all? { |v| v.is_a?(Numeric) } ? scores.sum { |f, v| weights[f] * v }.round(2) : nil
+    overall = compute_overall(scores, weights)
     { name: name, overall: overall, scores: scores,
       slot: fm['slot'], status: fm['status'].to_s,
       logged: fm['logged'].to_s, by: fm['logged_by'].to_s,
@@ -160,16 +170,26 @@ if ARGV.include?('--check')
     warn "FAIL: weight #{f} is #{weights[f]}, expected #{v}"
     ok = false
   end
-  # oracle: the synthetic example must score 3.5 (4,5,5,4,3,3)
-  ex = rows.find { |r| r[:name].start_with?('Example') }
-  if ex.nil?
-    warn 'SKIP: example row absent (fine once real entries replace it)'
-  elsif ex[:overall] != 3.5
-    warn "FAIL: example row computed #{ex[:overall]}, expected 3.5"
-    ok = false
+  # Oracle: a FIXTURE, not a vault note. Verifies the arithmetic and the wiring
+  # between weights and fields. Re-scoring a real ask must never fail this.
+  fixture  = { 'roi' => 4, 'strategic' => 5, 'impact' => 5,
+               'urgency' => 4, 'culture' => 3, 'complexity' => 3 }
+  got = compute_overall(fixture, weights)
+  if got == 3.5
+    puts '  oracle    fixture (4,5,5,4,3,3) = 3.5 ✓'
   else
-    puts '  oracle    example row = 3.5 ✓'
+    warn "FAIL: fixture computed #{got}, expected 3.5"
+    ok = false
   end
+
+  # Unscored rows must stay unscored rather than silently totalling to 0.
+  unless compute_overall(fixture.merge('culture' => nil), weights).nil?
+    warn 'FAIL: a partially-scored row produced a number instead of nil'
+    ok = false
+  end
+
+  scored = rows.count { |r| r[:overall] }
+  puts "  data      #{rows.size} row(s), #{scored} scored"
   puts ok ? "OK (#{rows.size} rows)" : 'CHECK FAILED'
   exit(ok ? 0 : 1)
 end
