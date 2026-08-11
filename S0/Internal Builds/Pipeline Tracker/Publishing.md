@@ -12,6 +12,32 @@ A live, read-only web view of [[Priority Ranking.base]] for leadership and S0 me
 
 **The published set is an allowlist, deliberately — never a link crawl.** It is `Intake/*.md` plus the two reference docs, and nothing else. A crawl would follow `[[S0 Charter]]` and `[[Benchmark Discipline]]` and publish what the charter forbids. A wikilink pointing outside the allowlist renders as plain text rather than a link, so the boundary holds even if someone adds a new `[[…]]` to a note.
 
+> [!danger] OPEN ISSUE, 2026-08-11: preview deployment URLs are NOT behind Access
+> The Access application is bound to the apex host only. Every Cloudflare Pages
+> deployment also gets a permanent `https://<hash>.s0-pipeline-tracker.pages.dev`
+> alias, and **those aliases serve the site with no authentication.** Verified:
+>
+> - `s0-pipeline-tracker.pages.dev/pipeline-tracker-build` → `Sign in ・ Cloudflare Access` ✅
+> - `<hash>.s0-pipeline-tracker.pages.dev/pipeline-tracker-build` → **200, the real page** ❌
+>
+> The discovery path is not guesswork: **wrangler prints the deployment URL into
+> the GitHub Actions log**, so anyone who can read the repo's Actions output has a
+> working unauthenticated link. `noindex` keeps crawlers off; it does nothing here.
+>
+> This predates per-entry pages — the single-table site had the same hole — but
+> publishing full note bodies widened it from six numbers per row to every word of
+> an entry, verbatim executive quote included.
+>
+> **Fix, in order:**
+> 1. Zero Trust → Access → Applications → add/edit an application covering the
+>    **wildcard** host `*.s0-pipeline-tracker.pages.dev`, same policy as the apex.
+>    This is the one that closes existing aliases as well as future ones.
+> 2. Pages → the project → Settings → Builds & deployments → set **Preview
+>    deployments: None**, so no new aliases are minted.
+> 3. Pages → Deployments → delete old deployments; each keeps its alias forever.
+>
+> Until step 1 is done, treat every intake entry as world-readable.
+
 > [!warning] The link is the perimeter
 > Rows carry client names, revenue judgments, verbatim executive quotes, and per-colleague Culture scores. **Add the Cloudflare Access policy before the first real entry exists.** A Pages URL with no Access policy is readable by anyone who is forwarded it — "read-only" says nothing about *who may read*.
 
