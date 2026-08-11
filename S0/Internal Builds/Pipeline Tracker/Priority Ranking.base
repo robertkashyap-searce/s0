@@ -2,6 +2,7 @@ filters:
   and:
     - file.hasTag("executive-intake")
     - file.name != "Executive Intake Entry"
+    - file.name != "Executive Intake Entry (Shipped)"
 formulas:
   overall: if(note.roi && note.strategic && note.impact && note.urgency && note.culture && note.complexity, (0.30 * note.roi + 0.20 * note.strategic + 0.20 * note.impact + 0.15 * note.urgency + 0.15 * note.culture - 0.25 * note.complexity).round(2), "—")
 properties:

@@ -112,6 +112,7 @@ Rank tells you the order. The slot tells you what's actually moving this week.
 | **Now** | In flight this week. Ranked high **and** the people are free. |
 | **Next** | Ranked, waiting on capacity. The default resting state. |
 | **Blocked** | Waiting on an external dependency, a decision, or an approval. |
+| **Done** | Delivered. Keeps its score as a record of what shipped and what it cost; no longer competes for capacity. Logged with [[Executive Intake Entry (Shipped)]]. |
 
 Re-checked at the weekly sync. **Re-slotting never edits a score** — an ask's merit doesn't change because we got busy.
 

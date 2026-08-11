@@ -77,8 +77,8 @@ def h(str) # macOS ships Ruby 2.6; no endless method defs
   CGI.escapeHTML(str.to_s)
 end
 
-def ranked_table(rows)
-  return '<p class="empty">No scored items yet.</p>' if rows.empty?
+def ranked_table(rows, empty = 'No scored items yet.')
+  return %(<p class="empty">#{h(empty)}</p>) if rows.empty?
 
   head = ['Ask', 'Overall', 'Slot', 'Status', *FIELDS.map { |f| LABELS[f] }, 'Logged']
   body = rows.map do |r|
@@ -110,8 +110,17 @@ def awaiting_table(rows)
 end
 
 def render(rows, weights, stamp)
-  ranked   = rows.reject { |r| r[:status] == 'Awaiting scoring' }.sort_by { |r| -(r[:overall] || -99) }
+  # Delivered work leaves the priority table. A finished project outranking live
+  # work under a heading that says "Priority ranking" reads as "do this next" to
+  # the one audience that matters, and nothing reviews this between here and them.
+  # Partition on status, NOT slot: the shipped template ships slot Done with
+  # status "Awaiting scoring" deliberately, so a slot-based split would route a
+  # half-filled row into a table that formats an Overall it does not have yet.
+  done     = %w[Shipped Done].freeze
   awaiting = rows.select { |r| r[:status] == 'Awaiting scoring' }
+  shipped  = rows.select { |r| done.include?(r[:status]) }.sort_by { |r| -(r[:overall] || -99) }
+  ranked   = rows.reject { |r| r[:status] == 'Awaiting scoring' || done.include?(r[:status]) }
+                 .sort_by { |r| -(r[:overall] || -99) }
   formula  = FIELDS.map { |f| format('%+g·%s', weights[f], LABELS[f]) }.join(' ')
 
   <<~HTML
@@ -148,8 +157,11 @@ def render(rows, weights, stamp)
       #{ranked_table(ranked)}
       <h2>Awaiting scoring</h2>
       #{awaiting_table(awaiting)}
+      <h2>Shipped</h2>
+      <p class="sub">Delivered. Scores kept as a record of what shipped and what it cost &mdash; not a queue.</p>
+      #{ranked_table(shipped, 'Nothing shipped yet.')}
       <footer>
-        Generated #{h(stamp)} · #{ranked.size} scored, #{awaiting.size} awaiting.<br>
+        Generated #{h(stamp)} · #{ranked.size} ranked, #{shipped.size} shipped, #{awaiting.size} awaiting.<br>
         Overall = #{h(formula)} &nbsp;(each 1&ndash;5) &mdash; weights read live from
         <code>Priority Ranking.base</code>, so this page and the vault cannot disagree.
       </footer>

@@ -76,6 +76,7 @@ So availability drives the **slot**, not the score:
 | **Now** | Ranked high and the people are free. In flight. |
 | **Next** | Ranked, waiting on capacity. Default state. |
 | **Blocked** | Waiting on a dependency, decision, or approval. |
+| **Done** | Delivered. Keeps its score as a record; out of the capacity rotation. |
 
 An ask keeps its score while its slot moves. That's what lets you say "not this week" without ever saying "not important."
 
@@ -122,6 +123,7 @@ Two views: **Priority ranking** (scored items, sorted by Overall Score, highest 
 | [[Priority Ranking.base]] | The live tracker. Auto-computed, auto-sorted. |
 | [[Scoring Rubric]] | 1–5 anchors per dimension. The reason two people score alike. |
 | [[Executive Intake Entry]] | The template, in `_Templates/`. Inserted via **Templates: Insert template**. |
+| [[Executive Intake Entry (Shipped)]] | Retrospective template, same folder. For work already delivered — scores Complexity on what it *actually* cost, which is how the rubric gets calibrated. |
 | `Intake/` | One note per ask. Each note is one row. Data only — no templates, no examples. |
 | [[Publishing]] | Read-only web view for leadership. Setup + the access-control gate. |
 
