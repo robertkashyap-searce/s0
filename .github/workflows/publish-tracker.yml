@@ -9,7 +9,10 @@ on:
     branches: [main]
     paths:
       - 'S0/Internal Builds/Pipeline Tracker/**'
-      - '.tools/render-tracker.rb'
+      # The whole dir, not one named file: the renderer gained a markdown module,
+      # and naming files individually meant a change to the new one would not
+      # trigger a deploy. The site would go stale with nothing to show it.
+      - '.tools/**'
       - '.github/workflows/publish-tracker.yml'
   workflow_dispatch: # manual re-publish button in the Actions tab
 

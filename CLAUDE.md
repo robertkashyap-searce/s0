@@ -86,12 +86,14 @@ Obsidian edit → Obsidian Git auto commit-and-sync (operator-set interval)
               → GitHub → Actions: verify → render → Cloudflare Pages (behind Access)
 ```
 
-- **The only executable code is `.tools/render-tracker.rb`.** Ruby, no gems.
+- **The only executable code is `.tools/` — `render-tracker.rb` and `markdown.rb`.** Ruby, no gems. `markdown.rb` is a hand-rolled Markdown→HTML renderer for the subset the notes actually use; no markdown gem is installed, and adding one in CI but not locally would give the two runners different output.
 - **It must stay Ruby 2.6-compatible** — macOS system Ruby has no `filter_map` and no endless method definitions (`def f(x) = …`). PyYAML is *not* installed, so use Ruby for YAML work, never Python.
 - **Run `ruby .tools/render-tracker.rb --check` after touching the renderer or the weights.** It must print `OK`. CI runs the same check and refuses to deploy if it fails — a stale ranking beats a wrong one.
 - **Weights are parsed out of `Priority Ranking.base`**, never hardcoded in the renderer. This is deliberate: two implementations of one ranking would eventually disagree about what is #1. Never hardcode weights to "simplify".
 - **The self-check asserts a fixture, not vault data.** An earlier version compared a real note's total to a constant, so every legitimate re-score failed CI. Never assert on live note values.
-- Deletions propagate — every run is a full rebuild and full-directory upload.
+- Deletions propagate — every run is a full rebuild and full-directory upload, and the renderer clears `.tracker-site/*.html` first so a retracted ask's page cannot survive locally and get re-uploaded.
+- **The site is multi-page, and the published set is an allowlist.** `index.html` holds the three tables; every intake note plus the two reference docs (`Scoring Rubric`, `Pipeline Tracker`) get their own page. `DOCS` in the renderer is that allowlist — **never turn it into a link crawl.** A crawl would follow `[[S0 Charter]]` and `[[Benchmark Discipline]]` and publish exactly what the charter forbids. A wikilink whose target isn't published renders as plain text, by design.
+- **Publishing a note publishes its entire body**, including the verbatim executive quote. Before this, only frontmatter-derived columns were visible for scored rows. Assume anything written in an intake note is readable by everyone behind the Access gate.
 - `.gitignore` excludes `.obsidian/workspace.json` deliberately: it is rewritten on every pane switch and would trigger a deploy each time.
 
 ---

@@ -1,10 +1,15 @@
 #!/usr/bin/env ruby
-# Renders the Pipeline Tracker to a static, self-contained HTML page.
+# Renders the Pipeline Tracker to a small static site.
 #
 # Weights are parsed OUT of Priority Ranking.base so the .base file stays the
 # single source of truth. Change a weight in Obsidian and the site follows.
 # Full rebuild every run, so deletions propagate (an unpublished retraction
 # staying live was the top disclosure risk raised in review).
+#
+# Output is a DIRECTORY, not one file: index.html carries the three tables, and
+# every published note gets its own page so the ranking is clickable the way the
+# vault is. Cloudflare Pages deploys a directory (see publish-tracker.yml), so
+# multiple interlinked pages need no infrastructure change.
 #
 # Usage:  ruby render-tracker.rb            # render
 #         ruby render-tracker.rb --check    # self-check, renders nothing
@@ -16,18 +21,36 @@
 require 'yaml'
 require 'cgi'
 require 'date'
+require_relative 'markdown'
 
 VAULT   = File.expand_path('..', __dir__) # this script lives in <vault>/.tools/
 TRACKER = File.join(VAULT, 'S0', 'Internal Builds', 'Pipeline Tracker')
 BASE    = File.join(TRACKER, 'Priority Ranking.base')
 INTAKE  = File.join(TRACKER, 'Intake')
-OUT     = File.join(VAULT, '.tracker-site', 'index.html')
+SITE    = File.join(VAULT, '.tracker-site')
+OUT     = File.join(SITE, 'index.html')
 
 FIELDS = %w[roi strategic impact urgency culture complexity].freeze
 LABELS = {
   'roi' => 'Revenue ROI', 'strategic' => 'Strategic', 'impact' => 'Client Impact',
   'urgency' => 'Urgency', 'culture' => 'Culture', 'complexity' => 'Complexity'
 }.freeze
+
+# Reference pages published alongside the intake notes. This is an ALLOWLIST,
+# never a link crawl. Every entry cites [[Scoring Rubric]], and the rubric plus
+# the operating doc are what make a score legible to someone landing on a note
+# from the ranking. Deliberately absent: Publishing.md (visibility:
+# internal-only, and it documents the access perimeter), the READMEs, and
+# everything outside this folder — a crawl would drag in the charter and
+# Benchmark Discipline, which the charter forbids publishing.
+DOCS = ['Scoring Rubric', 'Pipeline Tracker'].freeze
+
+# Statuses meaning "delivered". Kept out of the priority table: a finished
+# project outranking live work under a heading that says "Priority ranking"
+# reads as "do this next" to the one audience that matters.
+DONE = %w[Shipped Done].freeze
+
+AWAITING = 'Awaiting scoring'
 
 # --- weights: parsed from the .base formula, never hardcoded here -------------
 def load_weights
@@ -50,6 +73,10 @@ def compute_overall(scores, weights)
   scores.sum { |f, v| weights[f] * v }.round(2)
 end
 
+def slug(name)
+  name.to_s.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/\A-+|-+\z/, '')
+end
+
 # --- rows --------------------------------------------------------------------
 def load_rows(weights)
   # .map{}.compact rather than filter_map — Ruby 2.6 compatibility
@@ -59,17 +86,40 @@ def load_rows(weights)
     # only catches a template copied into Intake/ but not yet renamed.
     next if name.start_with?('Executive Intake Entry')
 
-    fm = YAML.safe_load(File.read(path).split(/^---\s*$/)[1].to_s,
+    raw = File.read(path)
+    fm = YAML.safe_load(raw.split(/^---\s*$/)[1].to_s,
                         permitted_classes: [Date], aliases: true) || {}
     next unless fm['tags'].to_a.include?('executive-intake')
 
     scores = FIELDS.to_h { |f| [f, fm[f]] }
-    overall = compute_overall(scores, weights)
-    { name: name, overall: overall, scores: scores,
-      slot: fm['slot'], status: fm['status'].to_s,
-      logged: fm['logged'].to_s, by: fm['logged_by'].to_s,
-      verbatim: fm['verbatim'].to_s, interpreted: fm['interpreted'].to_s }
+    { name: name, overall: compute_overall(scores, weights), scores: scores,
+      slot: fm['slot'].to_s, status: fm['status'].to_s,
+      logged: fm['logged'].to_s, shipped: fm['shipped'].to_s,
+      by: fm['logged_by'].to_s, verbatim: fm['verbatim'].to_s,
+      interpreted: fm['interpreted'].to_s,
+      href: "#{slug(name)}.html", body: raw }
   end.compact
+end
+
+def load_docs
+  DOCS.map do |name|
+    path = File.join(TRACKER, "#{name}.md")
+    next unless File.exist?(path)
+
+    { name: name, href: "#{slug(name)}.html", body: File.read(path) }
+  end.compact
+end
+
+# Wikilink target -> page. Anything absent renders as plain text, which enforces
+# the allowlist at the link level rather than hoping nobody clicks.
+def build_links(rows, docs)
+  links = {}
+  (rows + docs).each { |r| links[r[:name]] = r[:href] }
+  # The base IS the ranking tables, so its wikilink resolves to the index. This
+  # mirrors Pipeline Tracker.md embedding ![[Priority Ranking.base]] in Obsidian.
+  links['Priority Ranking.base'] = 'index.html'
+  links['Priority Ranking'] = 'index.html'
+  links
 end
 
 # --- html --------------------------------------------------------------------
@@ -77,18 +127,75 @@ def h(str) # macOS ships Ruby 2.6; no endless method defs
   CGI.escapeHTML(str.to_s)
 end
 
+CSS = <<~CSS
+  :root{--bg:#fff;--fg:#1a1a1a;--dim:#666;--line:#e3e3e3;--head:#f6f6f6;--warn:#8a4b00;--warnbg:#fff6e8;--accent:#0b5fa5;--codebg:#f4f4f5}
+  @media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#ededed;--dim:#9a9a9a;--line:#2e2e2e;--head:#1f1f1f;--warn:#ffc27a;--warnbg:#2a1f10;--accent:#7fb6e8;--codebg:#202022}}
+  *{box-sizing:border-box}
+  body{margin:0;padding:2rem 1.25rem;background:var(--bg);color:var(--fg);
+       font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
+  main{max-width:1100px;margin:0 auto}
+  h1{font-size:1.5rem;margin:0 0 .25rem;line-height:1.25}
+  h2{font-size:1.05rem;margin:2rem 0 .6rem}
+  h3{font-size:.98rem;margin:1.5rem 0 .5rem}
+  h4{font-size:.92rem;margin:1.2rem 0 .4rem;color:var(--dim)}
+  .sub{color:var(--dim);margin:0 0 1.25rem}
+  a{color:var(--accent)}
+  .crumb{display:inline-block;margin:0 0 1rem;font-size:13px}
+  .banner{background:var(--warnbg);color:var(--warn);border:1px solid currentColor;
+          border-radius:6px;padding:.6rem .8rem;font-weight:600;margin-bottom:1.5rem}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:.75rem 0}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th,td{text-align:left;padding:.5rem .65rem;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:var(--head);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+  .ranking td,.ranking th{white-space:nowrap}
+  .ranking td:first-child,.ranking th:first-child{white-space:normal;min-width:15rem}
+  .score{font-weight:700;font-variant-numeric:tabular-nums}
+  .empty{color:var(--dim);font-style:italic}
+  blockquote{margin:1rem 0;padding:.1rem 1rem;border-left:3px solid var(--line)}
+  blockquote.callout{border-left-color:var(--warn);background:var(--warnbg);border-radius:0 6px 6px 0;padding:.6rem 1rem}
+  .callout-title{font-weight:700;margin:.2rem 0;color:var(--warn)}
+  code{background:var(--codebg);padding:.1em .35em;border-radius:3px;font-size:12.5px}
+  pre{background:var(--codebg);padding:.75rem .9rem;border-radius:6px;overflow-x:auto}
+  pre code{background:none;padding:0;font-size:12.5px;line-height:1.45}
+  del{color:var(--dim)}
+  ul,ol{padding-left:1.4rem}
+  li{margin:.3rem 0}
+  hr{border:0;border-top:1px solid var(--line);margin:1.75rem 0}
+  .cards{display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0 1.25rem}
+  .card{border:1px solid var(--line);border-radius:6px;padding:.35rem .6rem;font-size:12.5px;white-space:nowrap}
+  .card b{font-variant-numeric:tabular-nums}
+  footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
+CSS
+
+BANNER = 'Internal &amp; commercially confidential — do not forward or share this link.'
+
+def page(title, body, footer)
+  <<~HTML
+    <!doctype html>
+    <html lang="en"><head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>#{h(title)}</title>
+    <style>#{CSS}</style></head><body><main>
+    #{body}
+    <footer>#{footer}</footer>
+    </main></body></html>
+  HTML
+end
+
 def ranked_table(rows, empty = 'No scored items yet.')
   return %(<p class="empty">#{h(empty)}</p>) if rows.empty?
 
   head = ['Ask', 'Overall', 'Slot', 'Status', *FIELDS.map { |f| LABELS[f] }, 'Logged']
   body = rows.map do |r|
-    cells = [h(r[:name]), format('%.2f', r[:overall]), h(r[:slot]), h(r[:status]),
+    ask = %(<a href="#{r[:href]}">#{h(r[:name])}</a>)
+    cells = [ask, format('%.2f', r[:overall]), h(r[:slot]), h(r[:status]),
              *FIELDS.map { |f| r[:scores][f] }, h(r[:logged])]
     tds = cells.each_with_index.map { |c, i| i == 1 ? %(<td class="score">#{c}</td>) : "<td>#{c}</td>" }
     "<tr>#{tds.join}</tr>"
   end
   <<~HTML
-    <div class="scroll"><table>
+    <div class="scroll"><table class="ranking">
       <thead><tr>#{head.map { |c| "<th>#{h(c)}</th>" }.join}</tr></thead>
       <tbody>#{body.join}</tbody>
     </table></div>
@@ -99,7 +206,8 @@ def awaiting_table(rows)
   return '<p class="empty">Nothing awaiting scoring.</p>' if rows.empty?
 
   body = rows.map do |r|
-    "<tr><td>#{h(r[:name])}</td><td>#{h(r[:verbatim])}</td><td>#{h(r[:logged])}</td><td>#{h(r[:by])}</td></tr>"
+    %(<tr><td><a href="#{r[:href]}">#{h(r[:name])}</a></td><td>#{h(r[:verbatim])}</td>) +
+      "<td>#{h(r[:logged])}</td><td>#{h(r[:by])}</td></tr>"
   end
   <<~HTML
     <div class="scroll"><table>
@@ -109,69 +217,84 @@ def awaiting_table(rows)
   HTML
 end
 
-def render(rows, weights, stamp)
-  # Delivered work leaves the priority table. A finished project outranking live
-  # work under a heading that says "Priority ranking" reads as "do this next" to
-  # the one audience that matters, and nothing reviews this between here and them.
-  # Partition on status, NOT slot: the shipped template ships slot Done with
-  # status "Awaiting scoring" deliberately, so a slot-based split would route a
-  # half-filled row into a table that formats an Overall it does not have yet.
-  done     = %w[Shipped Done].freeze
-  awaiting = rows.select { |r| r[:status] == 'Awaiting scoring' }
-  shipped  = rows.select { |r| done.include?(r[:status]) }.sort_by { |r| -(r[:overall] || -99) }
-  ranked   = rows.reject { |r| r[:status] == 'Awaiting scoring' || done.include?(r[:status]) }
+def index_page(rows, weights, stamp, pages)
+  awaiting = rows.select { |r| r[:status] == AWAITING }
+  shipped  = rows.select { |r| DONE.include?(r[:status]) }.sort_by { |r| -(r[:overall] || -99) }
+  ranked   = rows.reject { |r| r[:status] == AWAITING || DONE.include?(r[:status]) }
                  .sort_by { |r| -(r[:overall] || -99) }
   formula  = FIELDS.map { |f| format('%+g·%s', weights[f], LABELS[f]) }.join(' ')
 
-  <<~HTML
-    <!doctype html>
-    <html lang="en"><head>
-    <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="robots" content="noindex,nofollow">
-    <title>Pipeline Tracker — Priority Ranking</title>
-    <style>
-      :root{--bg:#fff;--fg:#1a1a1a;--dim:#666;--line:#e3e3e3;--head:#f6f6f6;--warn:#8a4b00;--warnbg:#fff6e8}
-      @media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#ededed;--dim:#9a9a9a;--line:#2e2e2e;--head:#1f1f1f;--warn:#ffc27a;--warnbg:#2a1f10}}
-      *{box-sizing:border-box}
-      body{margin:0;padding:2rem 1.25rem;background:var(--bg);color:var(--fg);
-           font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
-      main{max-width:1100px;margin:0 auto}
-      h1{font-size:1.5rem;margin:0 0 .25rem}h2{font-size:1.05rem;margin:2rem 0 .6rem}
-      .sub{color:var(--dim);margin:0 0 1.25rem}
-      .banner{background:var(--warnbg);color:var(--warn);border:1px solid currentColor;
-              border-radius:6px;padding:.6rem .8rem;font-weight:600;margin-bottom:1.5rem}
-      .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-      table{border-collapse:collapse;width:100%;font-size:14px}
-      th,td{text-align:left;padding:.5rem .65rem;border-bottom:1px solid var(--line);white-space:nowrap}
-      th{background:var(--head);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em}
-      td:first-child,th:first-child{white-space:normal;min-width:15rem}
-      .score{font-weight:700;font-variant-numeric:tabular-nums}
-      .empty{color:var(--dim);font-style:italic}
-      footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
-      code{font-size:12.5px}
-    </style></head><body><main>
-      <h1>Pipeline Tracker — Priority Ranking</h1>
-      <p class="sub">Executive Intake asks, scored and ranked. Read-only view.</p>
-      <div class="banner">Internal &amp; commercially confidential — do not forward or share this link.</div>
-      <h2>Priority ranking</h2>
-      #{ranked_table(ranked)}
-      <h2>Awaiting scoring</h2>
-      #{awaiting_table(awaiting)}
-      <h2>Shipped</h2>
-      <p class="sub">Delivered. Scores kept as a record of what shipped and what it cost &mdash; not a queue.</p>
-      #{ranked_table(shipped, 'Nothing shipped yet.')}
-      <footer>
-        Generated #{h(stamp)} · #{ranked.size} ranked, #{shipped.size} shipped, #{awaiting.size} awaiting.<br>
-        Overall = #{h(formula)} &nbsp;(each 1&ndash;5) &mdash; weights read live from
-        <code>Priority Ranking.base</code>, so this page and the vault cannot disagree.
-      </footer>
-    </main></body></html>
+  body = <<~HTML
+    <h1>Pipeline Tracker — Priority Ranking</h1>
+    <p class="sub">Executive Intake asks, scored and ranked. Read-only — every ask name links to its full entry.</p>
+    <div class="banner">#{BANNER}</div>
+    <h2>Priority ranking</h2>
+    #{ranked_table(ranked)}
+    <h2>Awaiting scoring</h2>
+    #{awaiting_table(awaiting)}
+    <h2>Shipped</h2>
+    <p class="sub">Delivered. Scores kept as a record of what shipped and what it cost &mdash; not a queue.</p>
+    #{ranked_table(shipped, 'Nothing shipped yet.')}
+    <h2>Reference</h2>
+    <ul>#{DOCS.map { |d| %(<li><a href="#{slug(d)}.html">#{h(d)}</a></li>) }.join}</ul>
   HTML
+
+  footer = "Generated #{h(stamp)} · #{ranked.size} ranked, #{shipped.size} shipped, " \
+           "#{awaiting.size} awaiting · #{pages} pages.<br>" \
+           "Overall = #{h(formula)} &nbsp;(each 1&ndash;5) &mdash; weights read live from " \
+           '<code>Priority Ranking.base</code>, so this page and the vault cannot disagree.'
+  page('Pipeline Tracker — Priority Ranking', body, footer)
+end
+
+def score_cards(row)
+  cards = []
+  cards << %(<span class="card">Overall <b>#{format('%.2f', row[:overall])}</b></span>) if row[:overall]
+  cards << %(<span class="card">Slot #{h(row[:slot])}</span>) unless row[:slot].empty?
+  cards << %(<span class="card">#{h(row[:status])}</span>) unless row[:status].empty?
+  FIELDS.each do |f|
+    v = row[:scores][f]
+    cards << %(<span class="card">#{h(LABELS[f])} <b>#{v}</b></span>) unless v.nil?
+  end
+  cards << %(<span class="card">Logged #{h(row[:logged])}</span>) unless row[:logged].empty?
+  cards << %(<span class="card">Shipped #{h(row[:shipped])}</span>) unless row[:shipped].empty?
+  cards.join
+end
+
+def note_page(row, links, stamp)
+  body = <<~HTML
+    <a class="crumb" href="index.html">&larr; Priority ranking</a>
+    <h1>#{h(row[:name])}</h1>
+    <div class="banner">#{BANNER}</div>
+    <div class="cards">#{score_cards(row)}</div>
+    #{Markdown.render(row[:body], links)}
+  HTML
+  page("#{row[:name]} — Pipeline Tracker", body,
+       "Generated #{h(stamp)} · Executive Intake entry.")
+end
+
+def doc_page(doc, links, stamp)
+  body = <<~HTML
+    <a class="crumb" href="index.html">&larr; Priority ranking</a>
+    <h1>#{h(doc[:name])}</h1>
+    <div class="banner">#{BANNER}</div>
+    #{Markdown.render(doc[:body], links)}
+  HTML
+  page("#{doc[:name]} — Pipeline Tracker", body, "Generated #{h(stamp)} · Reference.")
+end
+
+# Full rebuild. A page for a retracted ask must not survive a local run and get
+# re-uploaded on the next deploy — that is the disclosure failure Publishing.md
+# names. CI checks out fresh, but a working copy would otherwise accumulate.
+def clean_site
+  Dir.mkdir(SITE) unless Dir.exist?(SITE)
+  Dir.glob(File.join(SITE, '*.html')).each { |f| File.delete(f) }
 end
 
 # --- main --------------------------------------------------------------------
 weights = load_weights
 rows    = load_rows(weights)
+docs    = load_docs
+links   = build_links(rows, docs)
 
 if ARGV.include?('--check')
   ok = true
@@ -202,13 +325,46 @@ if ARGV.include?('--check')
     ok = false
   end
 
+  # One page per note, so two notes must never slug to the same filename — that
+  # would silently overwrite one entry's page with another's.
+  hrefs = (rows + docs).map { |r| r[:href] }
+  dupes = hrefs.select { |x| hrefs.count(x) > 1 }.uniq
+  if dupes.empty?
+    puts "  slugs     #{hrefs.size} unique page name(s) ✓"
+  else
+    warn "FAIL: duplicate page filenames: #{dupes.join(', ')}"
+    ok = false
+  end
+
+  md_fails = Markdown.self_check
+  if md_fails.empty?
+    puts '  markdown  renderer assertions ✓'
+  else
+    md_fails.each { |f| warn "FAIL: #{f}" }
+    ok = false
+  end
+
+  # Every link the site emits must land on a page the site writes. A dangling
+  # relative href is the failure a reader finds by clicking, not by looking.
+  written = ['index.html'] + hrefs
+  bad = links.values.uniq.reject { |t| written.include?(t) }
+  if bad.empty?
+    puts "  links     #{links.size} wikilink target(s) all resolve ✓"
+  else
+    warn "FAIL: link targets with no page: #{bad.join(', ')}"
+    ok = false
+  end
+
   scored = rows.count { |r| r[:overall] }
-  puts "  data      #{rows.size} row(s), #{scored} scored"
-  puts ok ? "OK (#{rows.size} rows)" : 'CHECK FAILED'
+  puts "  data      #{rows.size} row(s), #{scored} scored, #{docs.size} reference page(s)"
+  puts ok ? "OK (#{rows.size} rows, #{written.size} pages)" : 'CHECK FAILED'
   exit(ok ? 0 : 1)
 end
 
 stamp = Time.now.strftime('%Y-%m-%d %H:%M %Z')
-Dir.mkdir(File.dirname(OUT)) unless Dir.exist?(File.dirname(OUT))
-File.write(OUT, render(rows, weights, stamp))
-puts "wrote #{OUT} (#{rows.size} rows)"
+clean_site
+pages = 1 + rows.size + docs.size
+File.write(OUT, index_page(rows, weights, stamp, pages))
+rows.each { |r| File.write(File.join(SITE, r[:href]), note_page(r, links, stamp)) }
+docs.each { |d| File.write(File.join(SITE, d[:href]), doc_page(d, links, stamp)) }
+puts "wrote #{SITE} (#{rows.size} rows, #{pages} pages)"

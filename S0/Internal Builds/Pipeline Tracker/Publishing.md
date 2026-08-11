@@ -8,6 +8,10 @@ visibility: internal-only
 
 A live, read-only web view of [[Priority Ranking.base]] for leadership and S0 members who don't open Obsidian. Rendered and deployed by CI — **no laptop, no local server, no connection to this vault required for the site to stay up or to update.**
 
+**It is a small site, not one page.** `index.html` carries the three tables; every ask name links to a full page for that entry, and [[Scoring Rubric]] and [[Pipeline Tracker]] publish as reference pages so a score is legible to whoever lands on it. Cloudflare Pages deploys a directory, so this needed no infrastructure change — only more files in `.tracker-site/`.
+
+**The published set is an allowlist, deliberately — never a link crawl.** It is `Intake/*.md` plus the two reference docs, and nothing else. A crawl would follow `[[S0 Charter]]` and `[[Benchmark Discipline]]` and publish what the charter forbids. A wikilink pointing outside the allowlist renders as plain text rather than a link, so the boundary holds even if someone adds a new `[[…]]` to a note.
+
 > [!warning] The link is the perimeter
 > Rows carry client names, revenue judgments, verbatim executive quotes, and per-colleague Culture scores. **Add the Cloudflare Access policy before the first real entry exists.** A Pages URL with no Access policy is readable by anyone who is forwarded it — "read-only" says nothing about *who may read*.
 
@@ -41,7 +45,8 @@ Four properties worth knowing:
 
 | File | Role |
 |---|---|
-| `.tools/render-tracker.rb` | Renders base + intake notes → self-contained HTML. Ruby 2.6-compatible, no gems. |
+| `.tools/render-tracker.rb` | Renders base + intake notes → a small static site. Ruby 2.6-compatible, no gems. |
+| `.tools/markdown.rb` | Hand-rolled Markdown→HTML for the note subset the vault uses. No markdown gem is installed here; content is escaped before any tag is emitted. |
 | `.github/workflows/publish-tracker.yml` | Verify → render → deploy, on every relevant push. |
 | `.gitignore` | Excludes `workspace.json` (rewritten constantly — would deploy on every pane switch) and build output. |
 
@@ -85,5 +90,5 @@ Then trigger a first run: Actions tab → *Publish Pipeline Tracker* → Run wor
 
 - **Push needs a device.** Covered above. The site staying *live* needs nothing; the site staying *current* needs a device that has synced.
 - **The whole vault is on GitHub.** By deliberate choice. Note that [[Benchmark Discipline]] is marked internal-only and the charter forbids external publication of benchmark data — a private repo is not "published," but it is a third-party service holding it. Revisit if that reading ever tightens.
-- **No redaction layer.** Everything scored is shown, because the audience is internal. **If readers ever widen to clients, this needs a redaction pass first** — a client reading their own ROI score of 2 is an incident, not a transparency win.
+- **No redaction layer, and now the whole note body publishes — not just the columns.** Everything scored is shown, because the audience is internal. Note what changed when per-entry pages arrived: previously a scored row exposed only frontmatter-derived numbers, and the **verbatim executive quote appeared nowhere** for scored asks. Now every word of an entry is on the site — the verbatim, the interpreted requirement, recorded objections, contestable scores, and per-colleague Culture reasoning. That is a deliberate call for an internal audience behind Access, but it makes the intake note the disclosure surface: **assume anything written in an entry is read by everyone behind the gate.** **If readers ever widen to clients, this needs a redaction pass first** — a client reading their own ROI score of 2 is an incident, not a transparency win.
 - **Culture scores are visible to the people they describe.** Fine among S0 members if that's intended; it should be a deliberate yes, not a surprise.
