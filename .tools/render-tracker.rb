@@ -556,7 +556,12 @@ def dangling_links(pages)
   bad = []
   pages.each do |name, html|
     html.scan(/href="([^"]+)"/).flatten.uniq.each do |target|
-      next if target.start_with?('http', '#', 'mailto:')
+      # Skip fragments and anything carrying a URI scheme. This was a hardcoded
+      # list of http/#/mailto, which meant the first data: URI added to the page
+      # (an inlined favicon) was read as a dangling page link and aborted the
+      # whole render. A scheme test covers data:, tel:, blob: and whatever comes
+      # next, so only genuinely relative targets are checked against the pages.
+      next if target.start_with?('#') || target.match?(/\A[a-z][a-z0-9+.-]*:/i)
 
       bad << "#{name} -> #{target}" unless pages.key?(target)
     end
