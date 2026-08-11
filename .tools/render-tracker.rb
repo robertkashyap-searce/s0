@@ -174,6 +174,15 @@ CSS = <<~CSS
      Helvetica, Plex Mono 0.02% off Courier. San Francisco measured 14-21% off
      and was rejected there — a better-looking fallback that shifts more is the
      wrong trade. */
+  /* The real faces, self-hosted same-origin from .tracker-site/fonts. The design
+     system forbids external font requests (a stated GDPR finding), so these are
+     never fetched from a CDN. Latin subsets only — 65 KB for all four. Missing
+     glyphs fall through the stack per-glyph, which is why no unicode-range is
+     declared here. */
+  @font-face{font-family:"Space Grotesk";font-style:normal;font-weight:400 700;font-display:swap;src:url("fonts/space-grotesk-latin.woff2") format("woff2")}
+  @font-face{font-family:"Manrope";font-style:normal;font-weight:400 700;font-display:swap;src:url("fonts/manrope-latin.woff2") format("woff2")}
+  @font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/plex-mono-400-latin.woff2") format("woff2")}
+  @font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/plex-mono-500-latin.woff2") format("woff2")}
   @font-face{font-family:"Space Grotesk Fallback";src:local("Helvetica Neue"),local("Helvetica"),local("Arial");size-adjust:108.21%;ascent-override:98%;descent-override:29%;line-gap-override:0%}
   @font-face{font-family:"Manrope Fallback";src:local("Helvetica Neue"),local("Helvetica"),local("Arial");size-adjust:101.95%;ascent-override:107%;descent-override:30%;line-gap-override:0%}
   @font-face{font-family:"IBM Plex Mono Fallback";src:local("Courier New"),local("Courier");size-adjust:99.98%;ascent-override:102%;descent-override:27%;line-gap-override:0%}
@@ -191,7 +200,8 @@ CSS = <<~CSS
      display pulls in to -0.02em, the mono label voice pushes out to +0.12em,
      and nothing sits at zero. */
   body{margin:0;padding:0;background:var(--bg);color:var(--fg);
-       font-family:var(--body);font-size:17px;line-height:1.62;overflow-x:hidden}
+       font-family:var(--body);font-size:1.0625rem;line-height:1.62;overflow-x:hidden;
+       -webkit-font-smoothing:antialiased}
   main{max-width:1080px;margin:0 auto;padding:0 1.5rem 5.25rem}
   h1,h2,h3{font-family:var(--display);letter-spacing:-.02em;text-wrap:balance}
   h1{font-size:clamp(30px,6vw,42px);line-height:1.12;margin:0 0 .75rem;max-width:26ch}
@@ -209,11 +219,23 @@ CSS = <<~CSS
   .crumb{display:inline-block;margin:0 0 2rem;font-family:var(--mono);font-size:11.5px;
          font-weight:500;text-transform:uppercase;letter-spacing:.14em;text-decoration:none}
   .crumb:hover{text-decoration:underline}
-  .banner{background:var(--fg);color:var(--bg);border-radius:2px;
-          padding:.6rem .8rem;font-weight:600;margin-bottom:1.5rem}
+  /* The ink plane is the identity's loudest surface, so the confidentiality
+     notice runs full bleed rather than sitting in a toast-sized rounded plate.
+     516px is 1080/2 - 24, which keeps the text aligned to main's column — if
+     main's max-width changes, this changes with it. body has overflow-x:hidden,
+     so the 100vw scrollbar overhang is clipped rather than scrolling the page. */
+  .banner{background:var(--fg);color:var(--bg);border-radius:0;font-weight:600;
+          margin-bottom:2rem;margin-inline:calc(50% - 50vw);width:100vw;
+          padding:.85rem max(1.5rem,calc(50vw - 516px))}
+  ::selection{background:var(--fg);color:var(--bg)}
+  .banner::selection{background:var(--bg);color:var(--fg)}
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:.75rem 0}
-  table{border-collapse:collapse;width:100%;font-size:14px}
-  th,td{text-align:left;padding:.5rem .65rem;border-bottom:1px solid var(--line);vertical-align:top}
+  /* Tabular figures on anything in a column, per the type spec. Column one is
+     flush left so the table shares the prose column's left edge instead of
+     floating inboard of it. */
+  table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+  th,td{text-align:left;padding:.75rem .75rem .75rem 0;border-bottom:1px solid var(--line);vertical-align:top}
+  tbody tr:hover{background:var(--codebg)}
   thead th{font-family:var(--mono);font-weight:500;font-size:12.5px;text-transform:uppercase;
            letter-spacing:.12em;color:var(--dim);border-bottom:1px solid var(--line);white-space:nowrap}
   .ranking td,.ranking th{white-space:nowrap}
@@ -223,9 +245,14 @@ CSS = <<~CSS
   blockquote{margin:1rem 0;padding:.1rem 1rem;border-left:3px solid var(--line)}
   blockquote.callout{border-left:3px solid var(--warn);padding:.6rem 1rem}
   .callout-title{font-weight:700;margin:.2rem 0;color:var(--warn)}
-  code{background:var(--codebg);font-family:var(--mono);padding:.1em .35em;border-radius:2px;font-size:12.5px}
-  pre{background:var(--codebg);padding:.75rem .9rem;border-radius:2px;overflow-x:auto}
-  pre code{background:none;padding:0;font-size:12.5px;line-height:1.45}
+  /* The recessed plane measures 1.08:1 against paper — invisible on its own,
+     which is why the system always pairs it with a 1px hairline. That hairline
+     is this identity's only separation device. */
+  code{background:var(--codebg);border:1px solid var(--line);font-family:var(--mono);
+       padding:.1em .35em;border-radius:2px;font-size:.84em}
+  pre{background:var(--codebg);border:1px solid var(--line);padding:1.125rem 1.25rem;
+      border-radius:2px;margin:1.375rem 0;overflow-x:auto}
+  pre code{background:none;border:0;padding:0;font-size:12.5px;line-height:1.7}
   del{color:var(--dim)}
   ul,ol{padding-left:1.4rem}
   li{margin:.3rem 0}
@@ -246,7 +273,13 @@ CSS = <<~CSS
   @media (max-width:640px){.quilt-band{block-size:87px;mask-size:auto 87px}}
   /* Decorative only: in forced-colors the SVG fill is discarded, so let the
      pattern go rather than faking it with a border that would read as structure. */
-  @media (forced-colors:active){.quilt-band{display:none}}
+  /* Borders are re-asserted because the table headers and callouts are de-filled,
+     which leaves borders as the only structure. The focus ring must take Highlight
+     or it renders in the same CanvasText as every hairline and stops reading as a
+     ring. The quilt and the mark are decorative, so they drop rather than being
+     faked with a border that would read as structure. */
+  @media (forced-colors:active){.quilt-band{display:none}*{border-color:CanvasText}
+    :focus-visible{outline-color:Highlight}.banner{border:1px solid CanvasText}}
   /* The brand mark is one quilt cell clipped out of currentColor — CSS, not an
      asset, so it follows the plane and survives forced-colors. */
   .mark{display:inline-block;width:15px;height:15px;background:currentColor;
@@ -256,7 +289,11 @@ CSS = <<~CSS
   .wm{font-family:var(--mono);font-size:11.5px;font-weight:500;text-transform:uppercase;
       letter-spacing:.24em;color:var(--dim)}
   .cards{display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0 1.25rem}
-  .card{border:1px solid var(--line);border-radius:2px;padding:.35rem .6rem;font-size:12.5px;white-space:nowrap}
+  /* Chips carry the mono label voice at a 1.5px full-ink emphasis stroke. At the
+     decorative 1px hairline (1.34:1) they read as stray table cells. */
+  .card{display:inline-flex;align-items:center;gap:8px;min-block-size:32px;padding:6px 14px;
+        font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;
+        border:1.5px solid currentColor;border-radius:2px;white-space:nowrap}
   .card b{font-variant-numeric:tabular-nums}
   footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
 CSS
@@ -430,6 +467,26 @@ end
 def clean_site
   Dir.mkdir(SITE) unless Dir.exist?(SITE)
   Dir.glob(File.join(SITE, '*.html')).each { |f| File.delete(f) }
+  copy_fonts
+end
+
+# The three brand faces are self-hosted because the design system forbids
+# external font requests. Until now only the local() metric-matched shims
+# shipped, so any viewer without the faces installed — which is essentially
+# everyone — read the whole site in Helvetica and Courier.
+#
+# Source is .tools/fonts, which is TRACKED. Fonts placed under .tracker-site
+# instead would pass every local check (the files exist on the author's disk)
+# and 404 in production, because .tracker-site is gitignored and CI checks out
+# fresh. That is the same stale-sidecar failure clean_site exists to prevent,
+# so the copy is cleared and re-made on every run rather than accumulating.
+def copy_fonts
+  dst = File.join(SITE, 'fonts')
+  Dir.mkdir(dst) unless Dir.exist?(dst)
+  Dir.glob(File.join(dst, '*.woff2')).each { |f| File.delete(f) }
+  Dir.glob(File.join(__dir__, 'fonts', '*.woff2')).each do |src|
+    File.binwrite(File.join(dst, File.basename(src)), File.binread(src))
+  end
 end
 
 # --- main --------------------------------------------------------------------
