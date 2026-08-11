@@ -190,8 +190,16 @@ CSS = <<~CSS
         --display:"Space Grotesk","Space Grotesk Fallback",ui-sans-serif,system-ui,sans-serif;
         --body:"Manrope","Manrope Fallback",ui-sans-serif,system-ui,sans-serif;
         --mono:"IBM Plex Mono","IBM Plex Mono Fallback",ui-monospace,monospace}
-  :root{--bg:#faf9f6;--fg:#111110;--dim:#6f6d66;--line:#dcd9d0;--codebg:#f2f0ea;--warn:#89601f}
-  @media (prefers-color-scheme:dark){:root{--bg:#111110;--fg:#faf9f6;--dim:#9b9992;--line:#2e2d2a;--codebg:#1b1b19;--warn:#e1b66c}}
+  /* Two tones carry the identity and there is still no accent colour. But the
+     system spends colour on exactly two things — STATE and DATA — and this page
+     renders both: slot (Now / Next / Blocked) and status are state. These are the
+     design system's own state values, low-chroma so they read as instrument
+     markings rather than UI accents. Dark is the separately-selected set, never
+     an inversion. Both blocks MUST declare the identical key list. */
+  :root{--bg:#faf9f6;--fg:#111110;--dim:#6f6d66;--line:#dcd9d0;--codebg:#f2f0ea;
+        --warn:#89601f;--ok:#3c633d;--info:#43607e;--bad:#96372b}
+  @media (prefers-color-scheme:dark){:root{--bg:#111110;--fg:#faf9f6;--dim:#9b9992;--line:#2e2d2a;--codebg:#1b1b19;
+        --warn:#e1b66c;--ok:#81b482;--info:#83a8cf;--bad:#dd7767}}
   *{box-sizing:border-box}
   /* Sizes are the design system's measured anchors, not a generated ratio scale:
      42 / 30 / 19 / 18.5 / 17 / 14.5 / 12.5 / 11.5 / 11. The irregularity is
@@ -241,6 +249,20 @@ CSS = <<~CSS
   .ranking td,.ranking th{white-space:nowrap}
   .ranking td:first-child,.ranking th:first-child{white-space:normal;min-width:15rem}
   .score{font-weight:700;font-variant-numeric:tabular-nums}
+  /* Status, ported from components.css. The contract is "a word plus a mark,
+     never colour alone" — the mark is one quilt cell clipped from currentColor,
+     so the meaning survives for anyone who cannot see the hue. The score column
+     is deliberately left plain: at two rows a sequential ramp would encode
+     nothing a reader could use, and colour that carries no signal is the same
+     error as no colour at all. */
+  .status{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);
+          font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+  .status::before{content:"";inline-size:8px;block-size:8px;flex:none;
+                  background:currentColor;clip-path:polygon(0 0,100% 0,0 100%)}
+  .status--ok{color:var(--ok)}
+  .status--info{color:var(--info)}
+  .status--bad{color:var(--bad)}
+  .status--idle{color:var(--dim)}
   .empty{color:var(--dim);font-style:italic}
   blockquote{margin:1rem 0;padding:.1rem 1rem;border-left:3px solid var(--line)}
   blockquote.callout{border-left:3px solid var(--warn);padding:.6rem 1rem}
@@ -268,9 +290,12 @@ CSS = <<~CSS
      rasterise it. */
   .quilt-band{block-size:174px;background-color:currentColor;color:var(--fg);
               mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1740 174'%3E%3Cpath d='M87 0L87 87L0 87ZM435 0L522 0L522 87ZM696 0L783 0L696 87ZM783 0L870 0L870 87ZM957 0L957 87L870 87ZM957 0L1044 0L1044 87ZM1044 0L1131 0L1044 87ZM1131 0L1131 87L1044 87ZM1131 0L1218 0L1218 87ZM1305 0L1392 0L1392 87ZM1479 0L1479 87L1392 87ZM1479 0L1566 0L1566 87ZM1479 0L1566 87L1479 87ZM1653 0L1653 87L1566 87ZM1653 0L1740 0L1740 87ZM1653 0L1740 87L1653 87ZM0 87L87 87L87 174ZM87 87L174 87L87 174ZM174 87L174 174L87 174ZM174 87L261 87L261 174ZM261 87L348 87L261 174ZM348 87L348 174L261 174ZM348 87L435 174L348 174ZM522 87L609 87L609 174ZM609 87L696 87L609 174ZM696 87L696 174L609 174ZM696 87L783 174L696 174ZM870 87L957 87L957 174ZM957 87L1044 87L957 174ZM1044 87L1131 174L1044 174ZM1131 87L1218 87L1131 174ZM1218 87L1218 174L1131 174ZM1218 87L1305 174L1218 174ZM1305 87L1392 87L1305 174ZM1392 87L1392 174L1305 174ZM1740 87L1740 174L1653 174Z'/%3E%3C/svg%3E");
-              mask-repeat:repeat-x;mask-size:auto 174px;mask-position:left top;margin:4rem 0 0}
-  .quilt-band.top{margin:0 0 2.5rem}
-  @media (max-width:640px){.quilt-band{block-size:87px;mask-size:auto 87px}}
+              mask-repeat:repeat-x;mask-size:auto 32px;mask-position:left top;margin:4rem 0 0}
+  /* The dense cell, 16px, giving a 32px band. The system defines exactly two cell
+     sizes: 87px for full-bleed separators between marketing sections, and 16px for
+     denser surfaces. At 87px a 174px band dominates a document page and reads as a
+     title slide, which is what it is for. One band only, at the foot, where a
+     separator actually separates something. */
   /* Decorative only: in forced-colors the SVG fill is discarded, so let the
      pattern go rather than faking it with a border that would read as structure. */
   /* Borders are re-asserted because the table headers and callouts are de-filled,
@@ -309,7 +334,6 @@ def page(title, body, footer)
     <title>#{h(title)}</title>
     <style>#{CSS}</style></head><body>
     <div class="masthead"><span class="mark" aria-hidden="true"></span><span class="wm">S0 &middot; Internal Builds</span></div>
-    <div class="quilt-band top" aria-hidden="true"></div>
     <main>
     #{body}
     <footer>#{footer}</footer>
@@ -317,6 +341,26 @@ def page(title, body, footer)
     <div class="quilt-band" aria-hidden="true"></div>
     </body></html>
   HTML
+end
+
+# Slot and status are STATE, which is one of the two things this design system
+# spends colour on. Tone names are looked up from a frozen map with an idle
+# default, never interpolated from the value, so the self-check's hostile-input
+# row cannot inject a class. h() still escapes the visible text.
+#
+# Next maps to info rather than idle: it is a ranked, accepted position awaiting
+# capacity, not an absence of one. Idle is reserved for a value we do not know.
+STATUS_TONE = {
+  'now' => 'ok', 'shipped' => 'ok',
+  'next' => 'info', 'scored' => 'info',
+  'blocked' => 'bad'
+}.freeze
+
+def status_pill(value)
+  text = value.to_s.strip
+  return '' if text.empty?
+
+  %(<span class="status status--#{STATUS_TONE[text.downcase] || 'idle'}">#{h(text)}</span>)
 end
 
 def ranked_table(rows, empty = 'No scored items yet.')
@@ -330,7 +374,7 @@ def ranked_table(rows, empty = 'No scored items yet.')
     # h(), a non-numeric score reaches the highest-traffic page as raw markup —
     # and fixing only the guard is what would have exposed the second.
     overall = r[:overall] ? format('%.2f', r[:overall]) : '&mdash;'
-    cells = [ask, overall, h(r[:slot]), h(r[:status]),
+    cells = [ask, overall, status_pill(r[:slot]), status_pill(r[:status]),
              *FIELDS.map { |f| h(r[:scores][f]) }, h(r[:logged])]
     tds = cells.each_with_index.map { |c, i| i == 1 ? %(<td class="score">#{c}</td>) : "<td>#{c}</td>" }
     "<tr>#{tds.join}</tr>"
