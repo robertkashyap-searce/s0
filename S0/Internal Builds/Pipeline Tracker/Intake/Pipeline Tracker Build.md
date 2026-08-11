@@ -96,7 +96,7 @@ Anchors: [[Scoring Rubric]].
 | Weights cannot drift between site and vault | Renderer parses the coefficients *out of* the `.base` formula rather than duplicating them | **Verified by construction** |
 | Half-scored rows stay unscored | `--check` asserts `compute_overall` returns nil rather than totalling to 0 | **Verified** |
 | Retractions disappear from the site | Full rebuild and full-directory upload on every run | **Verified** |
-| Only the allowlisted notes reach the page | `DOCS` in the renderer is a declared list — `Intake/*.md` plus two reference docs — and an off-list wikilink renders as plain text rather than a link | **Verified by construction** |
+| Only opted-in notes reach the page | Publication is a frontmatter tag on the note — `executive-intake` for an intake entry, `publish-to-site` for a reference doc — read through a folder-scoped glob that cannot reach outside the tracker folder. A note that has not opted in renders as plain text where it is linked, not as a page | **Verified by construction** *(Amended 2026-08-12: was a hardcoded `DOCS` list in the renderer; the gate moved into note frontmatter so adding a page needs no code change)* |
 | The path works unattended | Changed one score, observed it reach the published page with no manual step | **Verified** |
 | The Overall column renders inside Obsidian | — | **Not verified.** The website was checked; the in-Obsidian base formula column was not. Carried as a limit, not a pass. |
 
