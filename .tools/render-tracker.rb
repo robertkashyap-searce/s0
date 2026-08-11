@@ -288,7 +288,7 @@ CSS = <<~CSS
      stripped because a mask reads alpha only. Two cells tall, full bleed, as the
      design system specifies. Never regenerate it, never make it regular, never
      rasterise it. */
-  .quilt-band{block-size:174px;background-color:currentColor;color:var(--fg);
+  .quilt-band{block-size:32px;background-color:currentColor;color:var(--fg);
               mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1740 174'%3E%3Cpath d='M87 0L87 87L0 87ZM435 0L522 0L522 87ZM696 0L783 0L696 87ZM783 0L870 0L870 87ZM957 0L957 87L870 87ZM957 0L1044 0L1044 87ZM1044 0L1131 0L1044 87ZM1131 0L1131 87L1044 87ZM1131 0L1218 0L1218 87ZM1305 0L1392 0L1392 87ZM1479 0L1479 87L1392 87ZM1479 0L1566 0L1566 87ZM1479 0L1566 87L1479 87ZM1653 0L1653 87L1566 87ZM1653 0L1740 0L1740 87ZM1653 0L1740 87L1653 87ZM0 87L87 87L87 174ZM87 87L174 87L87 174ZM174 87L174 174L87 174ZM174 87L261 87L261 174ZM261 87L348 87L261 174ZM348 87L348 174L261 174ZM348 87L435 174L348 174ZM522 87L609 87L609 174ZM609 87L696 87L609 174ZM696 87L696 174L609 174ZM696 87L783 174L696 174ZM870 87L957 87L957 174ZM957 87L1044 87L957 174ZM1044 87L1131 174L1044 174ZM1131 87L1218 87L1131 174ZM1218 87L1218 174L1131 174ZM1218 87L1305 174L1218 174ZM1305 87L1392 87L1305 174ZM1392 87L1392 174L1305 174ZM1740 87L1740 174L1653 174Z'/%3E%3C/svg%3E");
               mask-repeat:repeat-x;mask-size:auto 32px;mask-position:left top;margin:4rem 0 0}
   /* The dense cell, 16px, giving a 32px band. The system defines exactly two cell
@@ -351,7 +351,7 @@ end
 # Next maps to info rather than idle: it is a ranked, accepted position awaiting
 # capacity, not an absence of one. Idle is reserved for a value we do not know.
 STATUS_TONE = {
-  'now' => 'ok', 'shipped' => 'ok',
+  'now' => 'ok', 'shipped' => 'ok', 'done' => 'ok',
   'next' => 'info', 'scored' => 'info',
   'blocked' => 'bad'
 }.freeze
