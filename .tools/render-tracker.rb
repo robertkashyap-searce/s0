@@ -184,19 +184,31 @@ CSS = <<~CSS
   :root{--bg:#faf9f6;--fg:#111110;--dim:#6f6d66;--line:#dcd9d0;--codebg:#f2f0ea;--warn:#89601f}
   @media (prefers-color-scheme:dark){:root{--bg:#111110;--fg:#faf9f6;--dim:#9b9992;--line:#2e2d2a;--codebg:#1b1b19;--warn:#e1b66c}}
   *{box-sizing:border-box}
-  body{margin:0;padding:2rem 1.25rem;background:var(--bg);color:var(--fg);
+  /* Sizes are the design system's measured anchors, not a generated ratio scale:
+     42 / 30 / 19 / 18.5 / 17 / 14.5 / 12.5 / 11.5 / 11. The irregularity is
+     measured, so it is preserved. Measure is in ch because the constraint is
+     characters, not pixels. The identity's loudest move is the tracking split:
+     display pulls in to -0.02em, the mono label voice pushes out to +0.12em,
+     and nothing sits at zero. */
+  body{margin:0;padding:0;background:var(--bg);color:var(--fg);
        font-family:var(--body);font-size:17px;line-height:1.62;overflow-x:hidden}
-  main{max-width:1100px;margin:0 auto}
-  h1,h2,h3,h4{font-family:var(--display)}
-  h1{font-size:1.5rem;margin:0 0 .25rem;line-height:1.25}
-  h2{font-size:1.05rem;margin:2rem 0 .6rem}
-  h3{font-size:.98rem;margin:1.5rem 0 .5rem}
-  h4{font-size:.92rem;margin:1.2rem 0 .4rem;color:var(--dim)}
-  .sub{color:var(--dim);margin:0 0 1.25rem}
+  main{max-width:1080px;margin:0 auto;padding:0 1.5rem 5.25rem}
+  h1,h2,h3{font-family:var(--display);letter-spacing:-.02em;text-wrap:balance}
+  h1{font-size:clamp(30px,6vw,42px);line-height:1.12;margin:0 0 .75rem;max-width:26ch}
+  h2{font-size:clamp(22px,4.2vw,30px);line-height:1.14;margin:3.5rem 0 1rem;max-width:26ch}
+  h3{font-size:19px;line-height:1.3;margin:2.25rem 0 .5rem}
+  h4{font-family:var(--mono);font-size:11.5px;font-weight:500;text-transform:uppercase;
+     letter-spacing:.12em;color:var(--dim);margin:2rem 0 .5rem}
+  p{max-width:70ch}
+  .sub{color:var(--dim);margin:0 0 2rem;font-size:19px;max-width:66ch}
   a{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
   a:hover{opacity:.62}
   :focus-visible{outline:2px solid var(--fg);outline-offset:3px}
-  .crumb{display:inline-block;margin:0 0 1rem;font-size:13px}
+  /* The mono label voice does the work an icon usually does: it names the thing
+     instead of symbolising it. The identity ships no icon set by design. */
+  .crumb{display:inline-block;margin:0 0 2rem;font-family:var(--mono);font-size:11.5px;
+         font-weight:500;text-transform:uppercase;letter-spacing:.14em;text-decoration:none}
+  .crumb:hover{text-decoration:underline}
   .banner{background:var(--fg);color:var(--bg);border-radius:2px;
           padding:.6rem .8rem;font-weight:600;margin-bottom:1.5rem}
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:.75rem 0}
@@ -218,6 +230,31 @@ CSS = <<~CSS
   ul,ol{padding-left:1.4rem}
   li{margin:.3rem 0}
   hr{border:0;border-top:1px solid var(--line);margin:1.75rem 0}
+  /* The quilt is the only decoration this identity has — half-square triangles,
+     direction alternating on a checkerboard, about 58% inked, deterministic
+     (Park-Miller, seed 97). Inlined as a MASK, never a background-image: the
+     source SVG carries a literal ink fill, so as a background it would paint ink
+     regardless of theme and vanish on an ink surface. The SVG supplies the shape,
+     the theme supplies the colour through currentColor. The fill attribute is
+     stripped because a mask reads alpha only. Two cells tall, full bleed, as the
+     design system specifies. Never regenerate it, never make it regular, never
+     rasterise it. */
+  .quilt-band{block-size:174px;background-color:currentColor;color:var(--fg);
+              mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1740 174'%3E%3Cpath d='M87 0L87 87L0 87ZM435 0L522 0L522 87ZM696 0L783 0L696 87ZM783 0L870 0L870 87ZM957 0L957 87L870 87ZM957 0L1044 0L1044 87ZM1044 0L1131 0L1044 87ZM1131 0L1131 87L1044 87ZM1131 0L1218 0L1218 87ZM1305 0L1392 0L1392 87ZM1479 0L1479 87L1392 87ZM1479 0L1566 0L1566 87ZM1479 0L1566 87L1479 87ZM1653 0L1653 87L1566 87ZM1653 0L1740 0L1740 87ZM1653 0L1740 87L1653 87ZM0 87L87 87L87 174ZM87 87L174 87L87 174ZM174 87L174 174L87 174ZM174 87L261 87L261 174ZM261 87L348 87L261 174ZM348 87L348 174L261 174ZM348 87L435 174L348 174ZM522 87L609 87L609 174ZM609 87L696 87L609 174ZM696 87L696 174L609 174ZM696 87L783 174L696 174ZM870 87L957 87L957 174ZM957 87L1044 87L957 174ZM1044 87L1131 174L1044 174ZM1131 87L1218 87L1131 174ZM1218 87L1218 174L1131 174ZM1218 87L1305 174L1218 174ZM1305 87L1392 87L1305 174ZM1392 87L1392 174L1305 174ZM1740 87L1740 174L1653 174Z'/%3E%3C/svg%3E");
+              mask-repeat:repeat-x;mask-size:auto 174px;mask-position:left top;margin:4rem 0 0}
+  .quilt-band.top{margin:0 0 2.5rem}
+  @media (max-width:640px){.quilt-band{block-size:87px;mask-size:auto 87px}}
+  /* Decorative only: in forced-colors the SVG fill is discarded, so let the
+     pattern go rather than faking it with a border that would read as structure. */
+  @media (forced-colors:active){.quilt-band{display:none}}
+  /* The brand mark is one quilt cell clipped out of currentColor — CSS, not an
+     asset, so it follows the plane and survives forced-colors. */
+  .mark{display:inline-block;width:15px;height:15px;background:currentColor;
+        clip-path:polygon(0 0,100% 0,0 100%);flex:none}
+  .masthead{display:flex;align-items:center;gap:.65rem;max-width:1080px;margin:0 auto;
+            padding:2rem 1.5rem 0}
+  .wm{font-family:var(--mono);font-size:11.5px;font-weight:500;text-transform:uppercase;
+      letter-spacing:.24em;color:var(--dim)}
   .cards{display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0 1.25rem}
   .card{border:1px solid var(--line);border-radius:2px;padding:.35rem .6rem;font-size:12.5px;white-space:nowrap}
   .card b{font-variant-numeric:tabular-nums}
@@ -233,10 +270,15 @@ def page(title, body, footer)
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
     <title>#{h(title)}</title>
-    <style>#{CSS}</style></head><body><main>
+    <style>#{CSS}</style></head><body>
+    <div class="masthead"><span class="mark" aria-hidden="true"></span><span class="wm">S0 &middot; Internal Builds</span></div>
+    <div class="quilt-band top" aria-hidden="true"></div>
+    <main>
     #{body}
     <footer>#{footer}</footer>
-    </main></body></html>
+    </main>
+    <div class="quilt-band" aria-hidden="true"></div>
+    </body></html>
   HTML
 end
 
