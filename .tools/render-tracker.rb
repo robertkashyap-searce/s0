@@ -166,6 +166,17 @@ CSS = <<~CSS
      way the design system splits typography.css from colors.css. The two colour
      rules below MUST declare the identical six keys — a token in only one block
      inherits the wrong value with no error. */
+  /* Metric-matched fallback shims, copied verbatim from the design system's
+     tokens/fonts.css. Pure CSS over local faces via local() — no webfont
+     binaries, so the site still makes zero external requests. Without these the
+     Fallback families named in the stacks below are inert and the chains drop
+     to ui-sans-serif. Measured upstream, not tabulated: Manrope sits 1.95% off
+     Helvetica, Plex Mono 0.02% off Courier. San Francisco measured 14-21% off
+     and was rejected there — a better-looking fallback that shifts more is the
+     wrong trade. */
+  @font-face{font-family:"Space Grotesk Fallback";src:local("Helvetica Neue"),local("Helvetica"),local("Arial");size-adjust:108.21%;ascent-override:98%;descent-override:29%;line-gap-override:0%}
+  @font-face{font-family:"Manrope Fallback";src:local("Helvetica Neue"),local("Helvetica"),local("Arial");size-adjust:101.95%;ascent-override:107%;descent-override:30%;line-gap-override:0%}
+  @font-face{font-family:"IBM Plex Mono Fallback";src:local("Courier New"),local("Courier");size-adjust:99.98%;ascent-override:102%;descent-override:27%;line-gap-override:0%}
   :root{color-scheme:light dark;
         --display:"Space Grotesk","Space Grotesk Fallback",ui-sans-serif,system-ui,sans-serif;
         --body:"Manrope","Manrope Fallback",ui-sans-serif,system-ui,sans-serif;
