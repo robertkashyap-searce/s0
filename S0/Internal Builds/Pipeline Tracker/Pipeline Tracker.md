@@ -1,5 +1,5 @@
 ---
-tags: [s0, pipeline-tracker, internal, poc]
+tags: [s0, pipeline-tracker, internal, poc, publish-to-site]
 parent: "[[Internal Builds]]"
 status: v1 — baseline instrument, awaiting first recalibration
 ---

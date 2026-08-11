@@ -1,5 +1,5 @@
 ---
-tags: [s0, pipeline-tracker, rubric]
+tags: [s0, pipeline-tracker, rubric, publish-to-site]
 parent: "[[Pipeline Tracker]]"
 ---
 

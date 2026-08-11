@@ -43,7 +43,21 @@ LABELS = {
 # internal-only), the READMEs, and
 # everything outside this folder — a crawl would drag in the charter and
 # Benchmark Discipline, which the charter forbids publishing.
-DOCS = ['Scoring Rubric', 'Pipeline Tracker'].freeze
+# Publication is opt-in from the NOTE, not from this file. Tag a doc in the
+# tracker folder with this and it publishes on the next push, inheriting the
+# whole template — no code change. Untag it and it stops. That is the same gate
+# load_rows already uses for intake notes (tags include 'executive-intake'), so
+# there is one mechanism here, not two.
+#
+# Deliberately opt-in rather than "publish everything except X": a new file in
+# this folder must never publish because someone forgot to exclude it. The glob
+# is also folder-scoped, so it cannot reach the charter or Benchmark Discipline
+# no matter what is tagged — CLAUDE.md forbids this ever becoming a link crawl.
+#
+# Named 'publish-to-site' and not 'publish' because Publishing.md carries the tag
+# 'publishing'; exact matching keeps them apart, but a human reading frontmatter
+# should not have to squint.
+DOC_TAG = 'publish-to-site'
 
 # Statuses meaning "delivered". Kept out of the priority table: a finished
 # project outranking live work under a heading that says "Priority ranking"
@@ -90,6 +104,21 @@ def tag_list(value)
   end
 end
 
+# Parses a LEADING YAML frontmatter block, or returns {} when the file has none.
+#
+# The leading-fence guard is load-bearing, not defensive. load_docs globs a whole
+# folder, and README.md has no frontmatter but does use --- as a horizontal rule.
+# Splitting on /^---$/ regardless then handed body prose to the YAML parser,
+# which raised Psych::SyntaxError and aborted the entire render — one untagged
+# file taking down every page. load_rows shares the same shape and only escaped
+# it because Intake/ holds nothing but real intake notes.
+def frontmatter(raw)
+  return {} unless raw.start_with?("---\n")
+
+  YAML.safe_load(raw.split(/^---[ \t]*$/)[1].to_s,
+                 permitted_classes: [Date], aliases: true) || {}
+end
+
 # Scores are a trust boundary: YAML hands back whatever was typed, and a score
 # is the one note-derived value that used to reach HTML without escaping. A
 # non-number is dropped to nil (so it cannot total into a ranking) and reported,
@@ -120,8 +149,7 @@ def load_rows(weights)
     # split must agree about what a fence is; when they disagreed, a CRLF note
     # ranked normally while publishing its whole YAML block as page text.
     raw = File.read(path).gsub(/\r\n?/, "\n")
-    fm = YAML.safe_load(raw.split(/^---[ \t]*$/)[1].to_s,
-                        permitted_classes: [Date], aliases: true) || {}
+    fm = frontmatter(raw)
     next unless tag_list(fm['tags']).include?('executive-intake')
 
     scores, issues = validated_scores(fm)
@@ -135,11 +163,20 @@ def load_rows(weights)
 end
 
 def load_docs
-  DOCS.map do |name|
-    path = File.join(TRACKER, "#{name}.md")
-    next unless File.exist?(path)
+  # .map{}.compact rather than filter_map — Ruby 2.6 compatibility
+  Dir.glob(File.join(TRACKER, '*.md')).sort.map do |path|
+    name = File.basename(path, '.md')
+    # Normalise line endings on read, as load_rows does. A CRLF note used to
+    # publish its whole YAML block as page text because this parser's fence and
+    # markdown.rb's disagreed about what a fence is.
+    raw = File.read(path).gsub(/\r\n?/, "\n")
+    fm = frontmatter(raw)
+    # tag_list, not a second parser: it already handles the block sequence, the
+    # inline array and the bare scalar. README.md has no frontmatter at all, so it
+    # falls out here without needing a special case.
+    next unless tag_list(fm['tags']).include?(DOC_TAG)
 
-    { name: name, href: "#{slug(name)}.html", body: File.read(path) }
+    { name: name, href: "#{slug(name)}.html", body: raw }
   end.compact
 end
 
@@ -560,7 +597,7 @@ def awaiting_table(rows)
 end
 
 def index_page(rows, docs, weights, stamp, pages)
-  # Built from the docs actually LOADED, never from the DOCS constant. Building
+  # Built from the docs actually LOADED, never from the tag filter. Building
   # it from the constant emitted a link to a page that was never written when a
   # reference doc had been renamed or removed — a 404 a reader finds by clicking.
   reference =
