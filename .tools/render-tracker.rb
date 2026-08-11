@@ -165,7 +165,14 @@ end
 # with the banner wedged between them. Strips only a LEADING h1; mid-body
 # headings are untouched.
 def strip_leading_h1(body)
-  body.to_s.sub(/\A(?:\s*\n)*\#\s+.*\n/, '')
+  s = body.to_s
+  # Published notes open with a YAML frontmatter block, so the h1 is not at \A.
+  # The frontmatter is preserved verbatim and handed on — markdown.rb strips it
+  # itself, and removing it here would change what that parser sees.
+  fm = s.match(/\A---[ \t]*\n.*?\n---[ \t]*\n/m)
+  return s.sub(/\A(?:\s*\n)*\#[ \t]+.*\n/, '') unless fm
+
+  fm[0] + s[fm[0].length..-1].to_s.sub(/\A(?:\s*\n)*\#[ \t]+.*\n/, '')
 end
 
 # Mermaid needs a JavaScript renderer to draw a graph, and this site makes zero
@@ -181,7 +188,13 @@ def mermaid_to_flow(src)
 
   nodes = {}
   body.scan(/([A-Za-z0-9_]+)\[([^\]]+)\]/) { |id, label| nodes[id] = label }
-  edges = body.scan(/([A-Za-z0-9_]+)\s*--+>\s*([A-Za-z0-9_]+)/)
+  # Edges are parsed from a LABEL-FREE skeleton. Scanning the raw text matched the
+  # last word inside a label instead of the node id — on
+  # "A[Executive Intake<br/>verbal ask] --> B[...]" it captured "ask --> B",
+  # inventing a node and orphaning A, so the chain looked non-linear and silently
+  # fell back to the source block.
+  skeleton = body.gsub(/([A-Za-z0-9_]+)\[[^\]]*\]/) { Regexp.last_match(1) }
+  edges = skeleton.scan(/([A-Za-z0-9_]+)\s*--+>\s*([A-Za-z0-9_]+)/)
   return nil if nodes.empty? || edges.empty?
 
   froms = edges.map { |e| e[0] }
@@ -211,7 +224,12 @@ end
 # body arrives HTML-escaped inside the preformatted block.
 def enrich(html)
   html.gsub(%r{<pre class="lang-mermaid"><code>(.*?)</code></pre>}m) do
-    mermaid_to_flow(CGI.unescapeHTML(Regexp.last_match(1))) || Regexp.last_match(0)
+    # Capture BOTH groups to locals first. mermaid_to_flow runs its own regexes,
+    # which reset Regexp.last_match, so reading last_match(0) after calling it
+    # would return that function's last internal match instead of this block.
+    whole = Regexp.last_match(0)
+    inner = Regexp.last_match(1)
+    mermaid_to_flow(CGI.unescapeHTML(inner)) || whole
   end
 end
 
