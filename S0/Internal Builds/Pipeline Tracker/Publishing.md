@@ -28,13 +28,18 @@ A live, read-only web view of [[Priority Ranking.base]] for leadership and S0 me
 > publishing full note bodies widened it from six numbers per row to every word of
 > an entry, verbatim executive quote included.
 >
-> **Fix, in order:**
-> 1. Zero Trust → Access → Applications → add/edit an application covering the
+> **Fix.** Steps 1 and 2 could not be tested from here — they need account
+> access — so take them as the standard remedy, not as verified behaviour. Step 3
+> is the only one certain to remove an alias that is already serving.
+> 1. Zero Trust → Access → Applications → add an application covering the
 >    **wildcard** host `*.s0-pipeline-tracker.pages.dev`, same policy as the apex.
->    This is the one that closes existing aliases as well as future ones.
+>    This is the usual remedy for Pages preview URLs. **Re-test an existing alias
+>    afterwards** rather than assuming it now challenges.
 > 2. Pages → the project → Settings → Builds & deployments → set **Preview
 >    deployments: None**, so no new aliases are minted.
-> 3. Pages → Deployments → delete old deployments; each keeps its alias forever.
+> 3. Pages → Deployments → **delete every deployment that still holds an alias.**
+>    Each keeps its hostname indefinitely; deleting the deployment is what
+>    demonstrably takes the URL down.
 >
 > Until step 1 is done, treat every intake entry as world-readable.
 
