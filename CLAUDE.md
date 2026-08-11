@@ -74,7 +74,8 @@ So there is a delay, but there is no *reviewer*. Nobody is obliged to read your 
 - **`README.md` is the one deliberate exception.** GitHub renders a `README.md` per directory, so this repo has several — they exist for humans arriving from GitHub. Because their basenames collide, **never write `[[README]]`**; reference a README by its path instead.
 - **A `.base` file is a query, not a table.** It stores filters, formulas, columns and views — zero rows. Deleting notes empties the table without damaging the base. Never "fix" an empty table by editing the base.
 - **`.canvas` files are strict JSON.** `{"nodes":[…],"edges":[…]}`; nodes need `id`/`type`/`x`/`y`/`width`/`height`, edges need `id`/`fromNode`/`fromSide`/`toNode`/`toSide`. Malformed JSON opens blank with no error — validate with `ruby -rjson -e 'JSON.parse(File.read(ARGV[0]))' file.canvas` and confirm every edge references a real node id. Obsidian reflows positions when the user edits; treat that as intentional.
-- **Score fields must be unquoted numbers.** `roi: 2`, never `roi: "2"`. A quoted value is a string, fails the numeric check, and the row silently never scores.
+- **Score fields must be unquoted numbers.** `roi: 2`, never `roi: "2"`. A quoted value is a string, not a number. This used to unscore the row in silence; `--check` now rejects it by name and fails the build, so the deploy stops instead of publishing a wrong ranking.
+- **Tags may be a list or a bare scalar.** `tags: executive-intake` and a `- ` block sequence both work. Don't "fix" one into the other.
 - Templates live in `_Templates/` and are inserted via **Templates: Insert template**. `{{date}}` auto-fills. `Intake/` holds data only — no templates, no examples.
 
 ---

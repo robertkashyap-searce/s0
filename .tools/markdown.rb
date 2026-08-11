@@ -31,15 +31,25 @@ module Markdown
   # in the map renders as plain text, deliberately: the published site is an
   # allowlist, and a link to a page we chose not to publish must not exist.
   def self.render(src, links = {})
-    blocks(strip_frontmatter(src).split("\n", -1), links)
+    # Normalise line endings once, here, rather than tolerating \r in every
+    # block and inline pattern downstream. A CRLF note otherwise carries a
+    # trailing \r into every heading, cell and list item.
+    normalised = src.to_s.gsub(/\r\n?/, "\n")
+    blocks(strip_frontmatter(normalised).split("\n", -1), links)
   end
 
+  # The fence pattern must match the one render-tracker.rb uses to PARSE the
+  # frontmatter. It used to be start_with?("---\n") while the loader split on
+  # /^---\s*$/, whose \s* matches \r. A CRLF-saved note therefore parsed as a
+  # valid intake row while its frontmatter was never stripped — publishing the
+  # whole YAML block, including the verbatim executive quote and logged_by, as
+  # page text. Two parsers of one fence must agree.
   def self.strip_frontmatter(src)
     s = src.to_s
-    return s unless s.start_with?("---\n")
+    return s unless s =~ /\A---[ \t]*\r?\n/
 
-    parts = s.split(/^---\s*$/, 3)
-    parts.length >= 3 ? parts[2].to_s.sub(/\A\n/, '') : s
+    parts = s.split(/^---[ \t]*\r?$/, 3)
+    parts.length >= 3 ? parts[2].to_s.sub(/\A\r?\n/, '') : s
   end
 
   # --- block level ------------------------------------------------------------
@@ -175,17 +185,23 @@ module Markdown
     s = line.to_s.strip
     s = s[1..-1].to_s if s.start_with?('|')
     s = s[0..-2].to_s if s.end_with?('|')
+    # Honour bracket protection only when the brackets actually balance on this
+    # line. An unclosed [[ would otherwise leave depth > 0 forever, swallow every
+    # remaining pipe, and collapse the row into one cell — which emit_table then
+    # pads into a structurally perfect table with silently blank columns. Correct
+    # column counts matter more than protecting a malformed link.
+    protect = s.scan('[[').length == s.scan(']]').length
     out = []
     buf = String.new # frozen_string_literal is on; this needs to be mutable
     depth = 0
     i = 0
     while i < s.length
       pair = s[i, 2]
-      if pair == '[['
+      if protect && pair == '[['
         depth += 1
         buf << pair
         i += 2
-      elsif pair == ']]' && depth > 0
+      elsif protect && pair == ']]' && depth > 0
         depth -= 1
         buf << pair
         i += 2
@@ -238,7 +254,12 @@ module Markdown
     s = s.gsub(/`([^`]+)`/) { stash_it(stash, "<code>#{Regexp.last_match(1)}</code>") }
 
     # [[Target]] / [[Target|Alias]] — unresolved targets become plain text.
-    s = s.gsub(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/) do
+    # The character classes exclude "[" deliberately. When the target class
+    # permitted it, a single unclosed [[ earlier on the line matched forward
+    # across arbitrary prose and terminated at the NEXT wikilink's alias pipe;
+    # the bogus target then missed the allowlist and the unresolved branch emitted
+    # only the label, silently deleting every character in between.
+    s = s.gsub(/\[\[([^\]\[|]+)(?:\|([^\]\[]+))?\]\]/) do
       target = Regexp.last_match(1).strip
       label  = (Regexp.last_match(2) || target).strip
       href   = links[target]
@@ -250,8 +271,14 @@ module Markdown
     s = s.gsub(/\[([^\]]+)\]\(([^)\s]+)\)/) do
       label = Regexp.last_match(1)
       url   = Regexp.last_match(2)
-      safe  = !(url =~ %r{\A(?:https?://|\#|[\w.\-]+\.html)}).nil?
-      stash_it(stash, safe ? %(<a href="#{url}" rel="noopener">#{label}</a>) : label)
+      # A URL must not contain a stash placeholder. Wikilinks are stashed BEFORE
+      # links, and a stashed anchor holds raw, renderer-emitted quotes and angle
+      # brackets. Left unchecked, [text](<0>) passed the scheme test on its
+      # prefix and unstash then dropped a raw-quoted <a …> inside href="…".
+      # A legitimate URL never contains "<" — the content was escaped already.
+      safe = (url =~ /[<>]/).nil? &&
+             !(url =~ %r{\A(?:https?://[^\s<>]+|\#[^\s<>]+|[\w.\-]+\.html)\z}).nil?
+      stash_it(stash, safe ? %(<a href="#{CGI.escapeHTML(url)}" rel="noopener">#{label}</a>) : label)
     end
 
     s = s.gsub(/\*\*([^*]+)\*\*/, '<strong>\1</strong>')
@@ -343,6 +370,30 @@ module Markdown
     callout = render("> [!warning] Careful\n> body text\n")
     fails << 'markdown callout: class missing' unless callout.include?('callout-warning')
     fails << 'markdown callout: title missing' unless callout.include?('Careful')
+
+    # --- regressions found by adversarial review; each of these once shipped ---
+
+    # CRLF frontmatter must strip, or the whole YAML block (verbatim executive
+    # quote, logged_by) renders as page body.
+    crlf = render("---\r\nverbatim: secret quote\r\nlogged_by: A Person\r\n---\r\n\r\n## Body\r\n")
+    fails << 'markdown CRLF frontmatter not stripped' if crlf.include?('secret quote')
+    fails << 'markdown CRLF body not rendered' unless crlf.include?('<h2>Body</h2>')
+    lf = render("---\nverbatim: secret quote\n---\n\n## Body\n")
+    fails << 'markdown LF frontmatter not stripped' if lf.include?('secret quote')
+
+    # An unclosed [[ must not swallow the prose between it and the next wikilink.
+    eaten = inline('start [[ oops middle prose [[A|B]] end', 'A' => 'a.html')
+    %w[start middle prose end].each do |word|
+      fails << "markdown unclosed [[ deleted the word #{word.inspect}" unless eaten.include?(word)
+    end
+
+    # An unbalanced [[ must not collapse a table row into one cell.
+    fails << 'markdown unbalanced [[ collapsed a row' unless
+      cells('| a [[ b | c | d |').length == 3
+
+    # A stashed placeholder must never be adopted as a link URL.
+    injected = inline('[click]([[A]])', 'A' => 'a.html')
+    fails << "markdown placeholder adopted as href: #{injected}" if injected =~ /href="[^"]*<|href="\d/
 
     fails
   end

@@ -77,6 +77,36 @@ def slug(name)
   name.to_s.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/\A-+|-+\z/, '')
 end
 
+# Obsidian accepts three tag forms: a block sequence, `tags: [a, b]`, and the
+# bare scalar `tags: a`. Only the first two yield an Array, and String#to_a was
+# removed in Ruby 1.9 — so `fm['tags'].to_a` raised NoMethodError on the scalar
+# form and killed the render for EVERY note, not just the offending one.
+def tag_list(value)
+  case value
+  when Array  then value.map(&:to_s)
+  when String then value.split(/[,\s]+/).reject(&:empty?)
+  when nil    then []
+  else [value.to_s]
+  end
+end
+
+# Scores are a trust boundary: YAML hands back whatever was typed, and a score
+# is the one note-derived value that used to reach HTML without escaping. A
+# non-number is dropped to nil (so it cannot total into a ranking) and reported,
+# so a quoted "2" fails the build loudly instead of silently unscoring the row.
+def validated_scores(fm)
+  issues = []
+  scores = FIELDS.to_h do |f|
+    v = fm[f]
+    unless v.nil? || v.is_a?(Integer) || v.is_a?(Float)
+      issues << "#{f} is #{v.class} #{v.inspect} — scores must be unquoted numbers"
+      v = nil
+    end
+    [f, v]
+  end
+  [scores, issues]
+end
+
 # --- rows --------------------------------------------------------------------
 def load_rows(weights)
   # .map{}.compact rather than filter_map — Ruby 2.6 compatibility
@@ -86,17 +116,20 @@ def load_rows(weights)
     # only catches a template copied into Intake/ but not yet renamed.
     next if name.start_with?('Executive Intake Entry')
 
-    raw = File.read(path)
-    fm = YAML.safe_load(raw.split(/^---\s*$/)[1].to_s,
+    # Normalise line endings on read. markdown.rb's frontmatter fence and this
+    # split must agree about what a fence is; when they disagreed, a CRLF note
+    # ranked normally while publishing its whole YAML block as page text.
+    raw = File.read(path).gsub(/\r\n?/, "\n")
+    fm = YAML.safe_load(raw.split(/^---[ \t]*$/)[1].to_s,
                         permitted_classes: [Date], aliases: true) || {}
-    next unless fm['tags'].to_a.include?('executive-intake')
+    next unless tag_list(fm['tags']).include?('executive-intake')
 
-    scores = FIELDS.to_h { |f| [f, fm[f]] }
+    scores, issues = validated_scores(fm)
     { name: name, overall: compute_overall(scores, weights), scores: scores,
       slot: fm['slot'].to_s, status: fm['status'].to_s,
       logged: fm['logged'].to_s, shipped: fm['shipped'].to_s,
       by: fm['logged_by'].to_s, verbatim: fm['verbatim'].to_s,
-      interpreted: fm['interpreted'].to_s,
+      interpreted: fm['interpreted'].to_s, issues: issues,
       href: "#{slug(name)}.html", body: raw }
   end.compact
 end
@@ -189,8 +222,13 @@ def ranked_table(rows, empty = 'No scored items yet.')
   head = ['Ask', 'Overall', 'Slot', 'Status', *FIELDS.map { |f| LABELS[f] }, 'Logged']
   body = rows.map do |r|
     ask = %(<a href="#{r[:href]}">#{h(r[:name])}</a>)
-    cells = [ask, format('%.2f', r[:overall]), h(r[:slot]), h(r[:status]),
-             *FIELDS.map { |f| r[:scores][f] }, h(r[:logged])]
+    # Both the nil guard and h() on the scores are load-bearing. Without the
+    # guard, an unscored row in this bucket aborts the whole render; without
+    # h(), a non-numeric score reaches the highest-traffic page as raw markup —
+    # and fixing only the guard is what would have exposed the second.
+    overall = r[:overall] ? format('%.2f', r[:overall]) : '&mdash;'
+    cells = [ask, overall, h(r[:slot]), h(r[:status]),
+             *FIELDS.map { |f| h(r[:scores][f]) }, h(r[:logged])]
     tds = cells.each_with_index.map { |c, i| i == 1 ? %(<td class="score">#{c}</td>) : "<td>#{c}</td>" }
     "<tr>#{tds.join}</tr>"
   end
@@ -217,7 +255,17 @@ def awaiting_table(rows)
   HTML
 end
 
-def index_page(rows, weights, stamp, pages)
+def index_page(rows, docs, weights, stamp, pages)
+  # Built from the docs actually LOADED, never from the DOCS constant. Building
+  # it from the constant emitted a link to a page that was never written when a
+  # reference doc had been renamed or removed — a 404 a reader finds by clicking.
+  reference =
+    if docs.empty?
+      ''
+    else
+      items = docs.map { |d| %(<li><a href="#{d[:href]}">#{h(d[:name])}</a></li>) }.join
+      "<h2>Reference</h2>\n<ul>#{items}</ul>"
+    end
   awaiting = rows.select { |r| r[:status] == AWAITING }
   shipped  = rows.select { |r| DONE.include?(r[:status]) }.sort_by { |r| -(r[:overall] || -99) }
   ranked   = rows.reject { |r| r[:status] == AWAITING || DONE.include?(r[:status]) }
@@ -235,8 +283,7 @@ def index_page(rows, weights, stamp, pages)
     <h2>Shipped</h2>
     <p class="sub">Delivered. Scores kept as a record of what shipped and what it cost &mdash; not a queue.</p>
     #{ranked_table(shipped, 'Nothing shipped yet.')}
-    <h2>Reference</h2>
-    <ul>#{DOCS.map { |d| %(<li><a href="#{slug(d)}.html">#{h(d)}</a></li>) }.join}</ul>
+    #{reference}
   HTML
 
   footer = "Generated #{h(stamp)} · #{ranked.size} ranked, #{shipped.size} shipped, " \
@@ -253,7 +300,7 @@ def score_cards(row)
   cards << %(<span class="card">#{h(row[:status])}</span>) unless row[:status].empty?
   FIELDS.each do |f|
     v = row[:scores][f]
-    cards << %(<span class="card">#{h(LABELS[f])} <b>#{v}</b></span>) unless v.nil?
+    cards << %(<span class="card">#{h(LABELS[f])} <b>#{h(v)}</b></span>) unless v.nil?
   end
   cards << %(<span class="card">Logged #{h(row[:logged])}</span>) unless row[:logged].empty?
   cards << %(<span class="card">Shipped #{h(row[:shipped])}</span>) unless row[:shipped].empty?
@@ -280,6 +327,35 @@ def doc_page(doc, links, stamp)
     #{Markdown.render(doc[:body], links)}
   HTML
   page("#{doc[:name]} — Pipeline Tracker", body, "Generated #{h(stamp)} · Reference.")
+end
+
+# Renders every page into memory, keyed by filename. Two reasons this is not
+# written straight to disk. First, --check can then exercise the REAL render
+# path: the previous check never called ranked_table or index_page, so it
+# printed OK on input that aborted the render seconds later. Second, clean_site
+# can run after a successful build instead of before — a mid-render abort used
+# to leave the site directory emptied.
+def build_pages(rows, docs, weights, links, stamp)
+  total = 1 + rows.size + docs.size
+  pages = { 'index.html' => index_page(rows, docs, weights, stamp, total) }
+  rows.each { |r| pages[r[:href]] = note_page(r, links, stamp) }
+  docs.each { |d| pages[d[:href]] = doc_page(d, links, stamp) }
+  pages
+end
+
+# Every internal href must land on a page we actually write. The previous check
+# compared the links hash against a list derived from that same hash, so it was a
+# tautology that could not fail. This reads the rendered HTML instead.
+def dangling_links(pages)
+  bad = []
+  pages.each do |name, html|
+    html.scan(/href="([^"]+)"/).flatten.uniq.each do |target|
+      next if target.start_with?('http', '#', 'mailto:')
+
+      bad << "#{name} -> #{target}" unless pages.key?(target)
+    end
+  end
+  bad
 end
 
 # Full rebuild. A page for a retracted ask must not survive a local run and get
@@ -344,27 +420,55 @@ if ARGV.include?('--check')
     ok = false
   end
 
-  # Every link the site emits must land on a page the site writes. A dangling
-  # relative href is the failure a reader finds by clicking, not by looking.
-  written = ['index.html'] + hrefs
-  bad = links.values.uniq.reject { |t| written.include?(t) }
+  # Build the real pages. This is the assertion that matters: the check used to
+  # verify arithmetic only, and passed on input that crashed the render.
+  pages = build_pages(rows, docs, weights, links, 'check')
+  puts "  render    #{pages.size} page(s) built without error ✓"
+
+  # Read the hrefs out of the rendered HTML, not out of the hash that made them.
+  bad = dangling_links(pages)
   if bad.empty?
-    puts "  links     #{links.size} wikilink target(s) all resolve ✓"
+    total = pages.values.map { |html| html.scan(/href="/).length }.reduce(0, :+)
+    puts "  links     #{total} href(s) across #{pages.size} page(s) all resolve ✓"
   else
-    warn "FAIL: link targets with no page: #{bad.join(', ')}"
+    bad.each { |b| warn "FAIL: dangling link #{b}" }
+    ok = false
+  end
+
+  # Scores are the one note-derived value that reaches HTML without passing
+  # through markdown.rb, so they get their own escaping assertion.
+  hostile = '<img src=x onerror=alert(1)>'
+  probe = ranked_table([{ name: 'probe', href: 'index.html', overall: nil,
+                          scores: FIELDS.to_h { |f| [f, hostile] },
+                          slot: hostile, status: hostile, logged: hostile }])
+  if probe.include?(hostile)
+    warn 'FAIL: a hostile score reached the ranking table unescaped'
+    ok = false
+  else
+    puts '  escaping  hostile score / slot / status neutralised ✓'
+  end
+
+  # A quoted or non-numeric score used to unscore its row in silence.
+  flagged = rows.reject { |r| r[:issues].empty? }
+  if flagged.empty?
+    puts '  fields    every score is an unquoted number ✓'
+  else
+    flagged.each { |r| r[:issues].each { |i| warn "FAIL: #{r[:name]}: #{i}" } }
     ok = false
   end
 
   scored = rows.count { |r| r[:overall] }
   puts "  data      #{rows.size} row(s), #{scored} scored, #{docs.size} reference page(s)"
-  puts ok ? "OK (#{rows.size} rows, #{written.size} pages)" : 'CHECK FAILED'
+  puts ok ? "OK (#{rows.size} rows, #{pages.size} pages)" : 'CHECK FAILED'
   exit(ok ? 0 : 1)
 end
 
 stamp = Time.now.strftime('%Y-%m-%d %H:%M %Z')
+# Build first, then clear, then write. Clearing first meant any render error left
+# the site directory empty rather than leaving the previous ranking in place.
+pages = build_pages(rows, docs, weights, links, stamp)
+dangling = dangling_links(pages)
+abort "FATAL: dangling links, refusing to write: #{dangling.join(', ')}" unless dangling.empty?
 clean_site
-pages = 1 + rows.size + docs.size
-File.write(OUT, index_page(rows, weights, stamp, pages))
-rows.each { |r| File.write(File.join(SITE, r[:href]), note_page(r, links, stamp)) }
-docs.each { |d| File.write(File.join(SITE, d[:href]), doc_page(d, links, stamp)) }
-puts "wrote #{SITE} (#{rows.size} rows, #{pages} pages)"
+pages.each { |name, html| File.write(File.join(SITE, name), html) }
+puts "wrote #{SITE} (#{rows.size} rows, #{pages.size} pages)"
