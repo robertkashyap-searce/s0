@@ -161,166 +161,212 @@ def h(str) # macOS ships Ruby 2.6; no endless method defs
 end
 
 CSS = <<~CSS
-  /* futurify.ai v0: two tones, 1px hairlines, no shadows, no third hue.
-     Type tokens are theme-independent, so they sit in their own bare :root the
-     way the design system splits typography.css from colors.css. The two colour
-     rules below MUST declare the identical six keys — a token in only one block
-     inherits the wrong value with no error. */
-  /* Metric-matched fallback shims, copied verbatim from the design system's
-     tokens/fonts.css. Pure CSS over local faces via local() — no webfont
-     binaries, so the site still makes zero external requests. Without these the
-     Fallback families named in the stacks below are inert and the chains drop
-     to ui-sans-serif. Measured upstream, not tabulated: Manrope sits 1.95% off
-     Helvetica, Plex Mono 0.02% off Courier. San Francisco measured 14-21% off
-     and was rejected there — a better-looking fallback that shifts more is the
-     wrong trade. */
-  /* The real faces, self-hosted same-origin from .tracker-site/fonts. The design
-     system forbids external font requests (a stated GDPR finding), so these are
-     never fetched from a CDN. Latin subsets only — 65 KB for all four. Missing
-     glyphs fall through the stack per-glyph, which is why no unicode-range is
-     declared here. */
+  /* ---------------------------------------------------------------------------
+     futurify.ai v0 — the tracker's entire stylesheet, one coherent sheet.
+     Every value lives in exactly ONE place. An earlier version kept the motif
+     band height in two (block-size and mask-size) and they drifted apart, so
+     sizes that must agree are tokens now, not repeated literals.
+
+     Two tones carry the identity and there is no accent colour. The system
+     spends colour on exactly two things — STATE and DATA — and this page has
+     both: slot/status are state, the six scoring dimensions are data.
+     --------------------------------------------------------------------------- */
+
+  /* Faces. Self-hosted, same-origin, never a CDN: the brand package forbids
+     external font requests. Latin subsets only, 65 KB for all four; missing
+     glyphs fall through the stack per-glyph, hence no unicode-range. */
   @font-face{font-family:"Space Grotesk";font-style:normal;font-weight:400 700;font-display:swap;src:url("fonts/space-grotesk-latin.woff2") format("woff2")}
   @font-face{font-family:"Manrope";font-style:normal;font-weight:400 700;font-display:swap;src:url("fonts/manrope-latin.woff2") format("woff2")}
   @font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/plex-mono-400-latin.woff2") format("woff2")}
   @font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/plex-mono-500-latin.woff2") format("woff2")}
+  /* Metric-matched fallbacks, so first paint does not shift. Measured upstream:
+     Manrope 1.95% off Helvetica, Plex Mono 0.02% off Courier. */
   @font-face{font-family:"Space Grotesk Fallback";src:local("Helvetica Neue"),local("Helvetica"),local("Arial");size-adjust:108.21%;ascent-override:98%;descent-override:29%;line-gap-override:0%}
   @font-face{font-family:"Manrope Fallback";src:local("Helvetica Neue"),local("Helvetica"),local("Arial");size-adjust:101.95%;ascent-override:107%;descent-override:30%;line-gap-override:0%}
   @font-face{font-family:"IBM Plex Mono Fallback";src:local("Courier New"),local("Courier");size-adjust:99.98%;ascent-override:102%;descent-override:27%;line-gap-override:0%}
-  :root{color-scheme:light dark;
-        --display:"Space Grotesk","Space Grotesk Fallback",ui-sans-serif,system-ui,sans-serif;
-        --body:"Manrope","Manrope Fallback",ui-sans-serif,system-ui,sans-serif;
-        --mono:"IBM Plex Mono","IBM Plex Mono Fallback",ui-monospace,monospace}
-  /* Two tones carry the identity and there is still no accent colour. But the
-     system spends colour on exactly two things — STATE and DATA — and this page
-     renders both: slot (Now / Next / Blocked) and status are state. These are the
-     design system's own state values, low-chroma so they read as instrument
-     markings rather than UI accents. Dark is the separately-selected set, never
-     an inversion. Both blocks MUST declare the identical key list. */
-  :root{--bg:#faf9f6;--fg:#111110;--dim:#6f6d66;--line:#dcd9d0;--codebg:#f2f0ea;
-        --warn:#89601f;--ok:#3c633d;--info:#43607e;--bad:#96372b}
-  @media (prefers-color-scheme:dark){:root{--bg:#111110;--fg:#faf9f6;--dim:#9b9992;--line:#2e2d2a;--codebg:#1b1b19;
-        --warn:#e1b66c;--ok:#81b482;--info:#83a8cf;--bad:#dd7767}}
+
+  /* Theme-independent tokens. Sizes are the design system's measured anchors,
+     not a ratio scale: 42 / 30 / 19 / 18.5 / 17 / 14.5 / 12.5 / 11.5 / 11. */
+  :root{
+    --display:"Space Grotesk","Space Grotesk Fallback",ui-sans-serif,system-ui,sans-serif;
+    --body:"Manrope","Manrope Fallback",ui-sans-serif,system-ui,sans-serif;
+    --mono:"IBM Plex Mono","IBM Plex Mono Fallback",ui-monospace,monospace;
+    --band:174px;      /* motif band: 2 cells at 87px. ONE definition. */
+    --container:1320px;/* wider than the system's 1080 so 11 columns fit unscrolled */
+    --gutter:1.5rem;
+    --prose:70ch;
+  }
+
+  /* Colour. Light is primary and also the bare-:root default, so a page renders
+     correctly before any script runs. Dark is the design system's SEPARATELY
+     SELECTED set, never an inversion of light. Neither tone is pure: paper is a
+     warm off-white and ink a warm near-black, so the page is easy on the eye
+     without the shift being obvious.
+
+     All three blocks declare the IDENTICAL key list. A key present in only one
+     silently inherits the wrong value with no error. The data-theme stamp beats
+     the OS preference in both directions, which is what makes the toggle work. */
+  :root,:root[data-theme="light"]{
+    --bg:#faf9f6;--fg:#111110;--dim:#6f6d66;--line:#dcd9d0;--codebg:#f2f0ea;
+    --warn:#89601f;--ok:#3c633d;--info:#43607e;--bad:#96372b;
+    --c1:#bc4b37;--c2:#3464a0;--c3:#d19936;--c4:#833575;--c5:#509c63;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#111110;--fg:#faf9f6;--dim:#9b9992;--line:#2e2d2a;--codebg:#1b1b19;
+      --warn:#e1b66c;--ok:#81b482;--info:#83a8cf;--bad:#dd7767;
+      --c1:#d4614c;--c2:#447dc4;--c3:#bd891c;--c4:#964fa1;--c5:#4e9f63;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111110;--fg:#faf9f6;--dim:#9b9992;--line:#2e2d2a;--codebg:#1b1b19;
+    --warn:#e1b66c;--ok:#81b482;--info:#83a8cf;--bad:#dd7767;
+    --c1:#d4614c;--c2:#447dc4;--c3:#bd891c;--c4:#964fa1;--c5:#4e9f63;
+  }
+  :root{color-scheme:light dark}
+
+  /* Base ------------------------------------------------------------------- */
   *{box-sizing:border-box}
-  /* Sizes are the design system's measured anchors, not a generated ratio scale:
-     42 / 30 / 19 / 18.5 / 17 / 14.5 / 12.5 / 11.5 / 11. The irregularity is
-     measured, so it is preserved. Measure is in ch because the constraint is
-     characters, not pixels. The identity's loudest move is the tracking split:
-     display pulls in to -0.02em, the mono label voice pushes out to +0.12em,
-     and nothing sits at zero. */
-  body{margin:0;padding:0;background:var(--bg);color:var(--fg);
-       font-family:var(--body);font-size:1.0625rem;line-height:1.62;overflow-x:hidden;
-       -webkit-font-smoothing:antialiased}
-  main{max-width:1080px;margin:0 auto;padding:0 1.5rem 5.25rem}
-  h1,h2,h3{font-family:var(--display);letter-spacing:-.02em;text-wrap:balance}
+  body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:var(--body);
+       font-size:1.0625rem;line-height:1.62;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  main{max-width:var(--container);margin:0 auto;padding:0 var(--gutter) 5.25rem}
+  ::selection{background:var(--fg);color:var(--bg)}
+  :focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+
+  /* Type. The identity's loudest move is the tracking split: display pulls in to
+     -0.02em, the mono label voice pushes out to +0.12em, nothing sits at zero. */
+  h1,h2,h3{font-family:var(--display);letter-spacing:-.02em;font-weight:600;text-wrap:balance}
   h1{font-size:clamp(30px,6vw,42px);line-height:1.12;margin:0 0 .75rem;max-width:26ch}
   h2{font-size:clamp(22px,4.2vw,30px);line-height:1.14;margin:3.5rem 0 1rem;max-width:26ch}
   h3{font-size:19px;line-height:1.3;margin:2.25rem 0 .5rem}
   h4{font-family:var(--mono);font-size:11.5px;font-weight:500;text-transform:uppercase;
      letter-spacing:.12em;color:var(--dim);margin:2rem 0 .5rem}
-  p{max-width:70ch}
+  p{max-width:var(--prose);text-wrap:pretty}
+  ul,ol{padding-left:1.4rem;max-width:var(--prose)}
+  li{margin:.3rem 0}
   .sub{color:var(--dim);margin:0 0 2rem;font-size:19px;max-width:66ch}
   a{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
   a:hover{opacity:.62}
-  :focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+  del{color:var(--dim)}
+  hr{border:0;border-top:1px solid var(--line);margin:1.75rem 0}
+
   /* The mono label voice does the work an icon usually does: it names the thing
-     instead of symbolising it. The identity ships no icon set by design. */
-  .crumb{display:inline-block;margin:0 0 2rem;font-family:var(--mono);font-size:11.5px;
-         font-weight:500;text-transform:uppercase;letter-spacing:.14em;text-decoration:none}
+     rather than symbolising it. This identity ships no icon set, by design. */
+  .crumb{display:inline-flex;align-items:center;gap:10px;min-height:24px;margin:0 0 2rem;
+         font-family:var(--mono);font-size:12.5px;font-weight:500;text-transform:uppercase;
+         letter-spacing:.14em;text-decoration:none}
+  .crumb::before{content:"";inline-size:9px;block-size:9px;background:currentColor;flex:none;
+                 clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)}
   .crumb:hover{text-decoration:underline}
-  /* The ink plane is the identity's loudest surface, so the confidentiality
-     notice runs full bleed rather than sitting in a toast-sized rounded plate.
-     516px is 1080/2 - 24, which keeps the text aligned to main's column — if
-     main's max-width changes, this changes with it. body has overflow-x:hidden,
-     so the 100vw scrollbar overhang is clipped rather than scrolling the page. */
-  .banner{background:var(--fg);color:var(--bg);border-radius:0;font-weight:600;
-          margin-bottom:2rem;margin-inline:calc(50% - 50vw);width:100vw;
-          padding:.85rem max(1.5rem,calc(50vw - 516px))}
-  ::selection{background:var(--fg);color:var(--bg)}
+
+  /* Masthead + theme toggle ------------------------------------------------- */
+  .masthead{display:flex;align-items:center;gap:.65rem;max-width:var(--container);
+            margin:0 auto;padding:2rem var(--gutter) 0}
+  .mark{display:inline-block;width:15px;height:15px;background:currentColor;
+        clip-path:polygon(0 0,100% 0,0 100%);flex:none}
+  .wm{font-family:var(--mono);font-size:11.5px;font-weight:500;text-transform:uppercase;
+      letter-spacing:.24em;color:var(--dim)}
+  .tt{margin-left:auto;background:none;color:var(--dim);border:1px solid var(--line);
+      border-radius:2px;font-family:var(--mono);font-size:11px;font-weight:500;
+      text-transform:uppercase;letter-spacing:.12em;padding:7px 12px;min-height:32px;cursor:pointer}
+  .tt:hover{color:var(--fg);border-color:var(--fg)}
+
+  /* The confidentiality notice runs full bleed on the ink plane — the identity's
+     loudest surface. The inner padding keeps its text on main's column. */
+  .banner{background:var(--fg);color:var(--bg);border-radius:0;font-weight:600;margin-bottom:2rem;
+          margin-inline:calc(50% - 50vw);width:100vw;
+          padding:.85rem max(var(--gutter),calc(50vw - (var(--container) / 2) + var(--gutter)))}
   .banner::selection{background:var(--bg);color:var(--fg)}
+
+  /* Tables. No horizontal scroll: cells wrap instead, so the whole row is
+     readable at once. .scroll stays as a safety net because body has
+     overflow-x:hidden — anything that did overflow would be clipped, not
+     scrollable — but at this container width it should never engage. */
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:.75rem 0}
-  /* Tabular figures on anything in a column, per the type spec. Column one is
-     flush left so the table shares the prose column's left edge instead of
-     floating inboard of it. */
   table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
-  th,td{text-align:left;padding:.75rem .75rem .75rem 0;border-bottom:1px solid var(--line);vertical-align:top}
+  th,td{text-align:left;padding:.75rem .6rem .75rem 0;border-bottom:1px solid var(--line);
+        vertical-align:top;overflow-wrap:break-word}
+  thead th{font-family:var(--mono);font-weight:500;font-size:11.5px;text-transform:uppercase;
+           letter-spacing:.1em;color:var(--dim);padding-bottom:.625rem;line-height:1.3}
   tbody tr:hover{background:var(--codebg)}
-  thead th{font-family:var(--mono);font-weight:500;font-size:12.5px;text-transform:uppercase;
-           letter-spacing:.12em;color:var(--dim);border-bottom:1px solid var(--line);white-space:nowrap}
-  .ranking td,.ranking th{white-space:nowrap}
-  .ranking td:first-child,.ranking th:first-child{white-space:normal;min-width:15rem}
-  .score{font-weight:700;font-variant-numeric:tabular-nums}
-  /* Status, ported from components.css. The contract is "a word plus a mark,
-     never colour alone" — the mark is one quilt cell clipped from currentColor,
-     so the meaning survives for anyone who cannot see the hue. The score column
-     is deliberately left plain: at two rows a sequential ramp would encode
-     nothing a reader could use, and colour that carries no signal is the same
-     error as no colour at all. */
-  .status{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);
-          font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+  .ranking td:first-child,.ranking th:first-child{min-width:14rem}
+  .score{font-weight:700}
+  /* DATA colour: the five validated chart slots in their fixed order
+     (oxide, slate, brass, plum, moss) mark the five value dimensions. The order
+     is a colour-vision safety mechanism, not a preference, so it is not
+     reordered. Slot 3 sits below 3:1 on paper, which is why the spec requires
+     direct labels or a table view for anything using it — this is a table with
+     labelled headers, so that condition is met, and the hue is carried by a
+     3px rule rather than by text. Complexity takes the state colour instead of a
+     sixth slot: it is the one dimension that SUBTRACTS, so it is not a peer. */
+  .dim{border-top:3px solid var(--line)}
+  .d1{border-top-color:var(--c1)}
+  .d2{border-top-color:var(--c2)}
+  .d3{border-top-color:var(--c3)}
+  .d4{border-top-color:var(--c4)}
+  .d5{border-top-color:var(--c5)}
+  .d6{border-top-color:var(--bad)}
+
+  /* State: a word plus a mark, never colour alone. The mark is one quilt cell
+     clipped from currentColor, so meaning survives without the hue. */
+  .status{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);
+          font-size:11.5px;letter-spacing:.08em;text-transform:uppercase}
   .status::before{content:"";inline-size:8px;block-size:8px;flex:none;
                   background:currentColor;clip-path:polygon(0 0,100% 0,0 100%)}
   .status--ok{color:var(--ok)}
   .status--info{color:var(--info)}
   .status--bad{color:var(--bad)}
   .status--idle{color:var(--dim)}
-  .empty{color:var(--dim);font-style:italic}
-  blockquote{margin:1rem 0;padding:.1rem 1rem;border-left:3px solid var(--line)}
-  blockquote.callout{border-left:3px solid var(--warn);padding:.6rem 1rem}
-  .callout-title{font-weight:700;margin:.2rem 0;color:var(--warn)}
-  /* The recessed plane measures 1.08:1 against paper — invisible on its own,
-     which is why the system always pairs it with a 1px hairline. That hairline
-     is this identity's only separation device. */
+
+  /* Chips carry the mono voice at the 1.5px emphasis stroke; at the decorative
+     1px hairline (1.34:1) they read as stray table cells. */
+  .cards{display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0 1.25rem}
+  .card{display:inline-flex;align-items:center;gap:8px;min-block-size:32px;padding:6px 14px;
+        font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;
+        border:1.5px solid currentColor;border-radius:2px;white-space:nowrap}
+  .card b{font-variant-numeric:tabular-nums}
+  .empty{color:var(--dim);font-family:var(--mono);font-size:14px}
+
+  /* Quotes and code. The recessed plane measures 1.08:1 against paper, so it is
+     invisible alone — the system always pairs it with the 1px hairline, which is
+     this identity's only separation device. */
+  blockquote{margin:1rem 0;padding:.1rem 1rem;border-left:3px solid var(--line);max-width:78ch}
+  blockquote.callout{border-left:3px solid currentColor;padding:.6rem 1rem}
+  blockquote.callout-warning{border-left-color:var(--warn)}
+  .callout-title{font-weight:700;margin:.2rem 0;color:var(--dim)}
   code{background:var(--codebg);border:1px solid var(--line);font-family:var(--mono);
        padding:.1em .35em;border-radius:2px;font-size:.84em}
   pre{background:var(--codebg);border:1px solid var(--line);padding:1.125rem 1.25rem;
       border-radius:2px;margin:1.375rem 0;overflow-x:auto}
   pre code{background:none;border:0;padding:0;font-size:12.5px;line-height:1.7}
-  del{color:var(--dim)}
-  ul,ol{padding-left:1.4rem}
-  li{margin:.3rem 0}
-  hr{border:0;border-top:1px solid var(--line);margin:1.75rem 0}
-  /* The quilt is the only decoration this identity has — half-square triangles,
+
+  footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--line);
+         color:var(--dim);font-size:14px;max-width:78ch}
+
+  /* The quilt is this identity's only decoration — half-square triangles,
      direction alternating on a checkerboard, about 58% inked, deterministic
      (Park-Miller, seed 97). Inlined as a MASK, never a background-image: the
      source SVG carries a literal ink fill, so as a background it would paint ink
-     regardless of theme and vanish on an ink surface. The SVG supplies the shape,
-     the theme supplies the colour through currentColor. The fill attribute is
-     stripped because a mask reads alpha only. Two cells tall, full bleed, as the
-     design system specifies. Never regenerate it, never make it regular, never
-     rasterise it. */
-  .quilt-band{block-size:32px;background-color:currentColor;color:var(--fg);
+     regardless of theme and vanish on an ink surface. The SVG gives the shape,
+     the theme gives the colour through currentColor. Height comes from --band in
+     both places so the box and the mask cannot drift apart. */
+  .quilt-band{block-size:var(--band);background-color:currentColor;color:var(--fg);
               mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1740 174'%3E%3Cpath d='M87 0L87 87L0 87ZM435 0L522 0L522 87ZM696 0L783 0L696 87ZM783 0L870 0L870 87ZM957 0L957 87L870 87ZM957 0L1044 0L1044 87ZM1044 0L1131 0L1044 87ZM1131 0L1131 87L1044 87ZM1131 0L1218 0L1218 87ZM1305 0L1392 0L1392 87ZM1479 0L1479 87L1392 87ZM1479 0L1566 0L1566 87ZM1479 0L1566 87L1479 87ZM1653 0L1653 87L1566 87ZM1653 0L1740 0L1740 87ZM1653 0L1740 87L1653 87ZM0 87L87 87L87 174ZM87 87L174 87L87 174ZM174 87L174 174L87 174ZM174 87L261 87L261 174ZM261 87L348 87L261 174ZM348 87L348 174L261 174ZM348 87L435 174L348 174ZM522 87L609 87L609 174ZM609 87L696 87L609 174ZM696 87L696 174L609 174ZM696 87L783 174L696 174ZM870 87L957 87L957 174ZM957 87L1044 87L957 174ZM1044 87L1131 174L1044 174ZM1131 87L1218 87L1131 174ZM1218 87L1218 174L1131 174ZM1218 87L1305 174L1218 174ZM1305 87L1392 87L1305 174ZM1392 87L1392 174L1305 174ZM1740 87L1740 174L1653 174Z'/%3E%3C/svg%3E");
-              mask-repeat:repeat-x;mask-size:auto 32px;mask-position:left top;margin:4rem 0 0}
-  /* The dense cell, 16px, giving a 32px band. The system defines exactly two cell
-     sizes: 87px for full-bleed separators between marketing sections, and 16px for
-     denser surfaces. At 87px a 174px band dominates a document page and reads as a
-     title slide, which is what it is for. One band only, at the foot, where a
-     separator actually separates something. */
-  /* Decorative only: in forced-colors the SVG fill is discarded, so let the
-     pattern go rather than faking it with a border that would read as structure. */
-  /* Borders are re-asserted because the table headers and callouts are de-filled,
-     which leaves borders as the only structure. The focus ring must take Highlight
-     or it renders in the same CanvasText as every hairline and stops reading as a
-     ring. The quilt and the mark are decorative, so they drop rather than being
-     faked with a border that would read as structure. */
-  @media (forced-colors:active){.quilt-band{display:none}*{border-color:CanvasText}
-    :focus-visible{outline-color:Highlight}.banner{border:1px solid CanvasText}}
-  /* The brand mark is one quilt cell clipped out of currentColor — CSS, not an
-     asset, so it follows the plane and survives forced-colors. */
-  .mark{display:inline-block;width:15px;height:15px;background:currentColor;
-        clip-path:polygon(0 0,100% 0,0 100%);flex:none}
-  .masthead{display:flex;align-items:center;gap:.65rem;max-width:1080px;margin:0 auto;
-            padding:2rem 1.5rem 0}
-  .wm{font-family:var(--mono);font-size:11.5px;font-weight:500;text-transform:uppercase;
-      letter-spacing:.24em;color:var(--dim)}
-  .cards{display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0 1.25rem}
-  /* Chips carry the mono label voice at a 1.5px full-ink emphasis stroke. At the
-     decorative 1px hairline (1.34:1) they read as stray table cells. */
-  .card{display:inline-flex;align-items:center;gap:8px;min-block-size:32px;padding:6px 14px;
-        font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;
-        border:1.5px solid currentColor;border-radius:2px;white-space:nowrap}
-  .card b{font-variant-numeric:tabular-nums}
-  footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
+              mask-repeat:repeat-x;mask-size:auto var(--band);mask-position:left top;margin:4rem 0 0}
+  @media (max-width:640px){:root{--band:87px}}
+
+  /* Forced colours: the UA discards the brand steps, so borders are re-asserted
+     because de-filled headers and callouts leave borders as the only structure,
+     and the focus ring must take Highlight or it renders in the same CanvasText
+     as every hairline and stops reading as a ring. The quilt and the mark are
+     decorative, so they are allowed to go rather than being faked with a border
+     that would read as structure. */
+  @media (forced-colors:active){
+    *{border-color:CanvasText}
+    :focus-visible{outline-color:Highlight}
+    .banner{border:1px solid CanvasText}
+    .quilt-band{display:none}
+  }
 CSS
 
 BANNER = 'Internal &amp; commercially confidential. This site is public — treat anything written in an intake note as world-readable.'
@@ -332,13 +378,21 @@ def page(title, body, footer)
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
     <title>#{h(title)}</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23faf9f6'/%3E%3Cpath d='M0 0h16L0 16z' fill='%23111110'/%3E%3C/svg%3E">
+    <script>(function(){try{var s=localStorage.getItem("s0-theme");if(s){document.documentElement.setAttribute("data-theme",s)}}catch(e){}})();</script>
     <style>#{CSS}</style></head><body>
-    <div class="masthead"><span class="mark" aria-hidden="true"></span><span class="wm">S0 &middot; Internal Builds</span></div>
+    <div class="masthead"><span class="mark" aria-hidden="true"></span><span class="wm">S0 &middot; Internal Builds</span>
+    <button class="tt" id="tt" type="button" aria-label="Switch between light and dark">Theme</button></div>
     <main>
     #{body}
     <footer>#{footer}</footer>
     </main>
     <div class="quilt-band" aria-hidden="true"></div>
+    <script>(function(){var r=document.documentElement,b=document.getElementById("tt");if(!b){return}
+    b.addEventListener("click",function(){
+    var cur=r.getAttribute("data-theme")||(window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+    var nxt=cur==="dark"?"light":"dark";r.setAttribute("data-theme",nxt);
+    try{localStorage.setItem("s0-theme",nxt)}catch(e){}});})();</script>
     </body></html>
   HTML
 end
@@ -366,7 +420,12 @@ end
 def ranked_table(rows, empty = 'No scored items yet.')
   return %(<p class="empty">#{h(empty)}</p>) if rows.empty?
 
-  head = ['Ask', 'Overall', 'Slot', 'Status', *FIELDS.map { |f| LABELS[f] }, 'Logged']
+  # The six dimension columns carry a chart-slot rule so the reader can tell
+  # which column is which at a glance. Classes come from the fixed FIELDS index,
+  # never from note content, so nothing user-supplied reaches a class name.
+  head = [['Ask', nil], ['Overall', nil], ['Slot', nil], ['Status', nil],
+          *FIELDS.each_with_index.map { |f, i| [LABELS[f], "dim d#{i + 1}"] },
+          ['Logged', nil]]
   body = rows.map do |r|
     ask = %(<a href="#{r[:href]}">#{h(r[:name])}</a>)
     # Both the nil guard and h() on the scores are load-bearing. Without the
@@ -381,7 +440,7 @@ def ranked_table(rows, empty = 'No scored items yet.')
   end
   <<~HTML
     <div class="scroll"><table class="ranking">
-      <thead><tr>#{head.map { |c| "<th>#{h(c)}</th>" }.join}</tr></thead>
+      <thead><tr>#{head.map { |c, cls| cls ? %(<th class="#{cls}">#{h(c)}</th>) : "<th>#{h(c)}</th>" }.join}</tr></thead>
       <tbody>#{body.join}</tbody>
     </table></div>
   HTML
