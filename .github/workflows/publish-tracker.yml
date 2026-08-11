@@ -16,13 +16,27 @@ on:
       - '.github/workflows/publish-tracker.yml'
   workflow_dispatch: # manual re-publish button in the Actions tab
 
+# GitHub Pages needs write access to Pages plus an OIDC token for deploy-pages;
+# the renderer only ever reads the repo.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 concurrency:
-  group: publish-tracker
-  cancel-in-progress: true # a burst of pushes deploys once, from the newest state
+  group: pages # the dedicated group serialises Pages deploys across workflows
+  # cancel-in-progress: false, unlike a plain build job. GitHub still cancels an
+  # older *pending* run when a newer one queues, so a burst of pushes collapses
+  # to one deploy from the newest state — but a deployment already in flight is
+  # left to finish, because cancelling one mid-flight can leave Pages stuck.
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest # ships with Ruby; the renderer needs no gems
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,10 +47,14 @@ jobs:
       - name: Render the site
         run: ruby '.tools/render-tracker.rb'
 
+      - uses: actions/configure-pages@v5
+
       # Full-directory upload, so deleted or retracted asks disappear from the site.
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      - name: Upload the rendered site
+        uses: actions/upload-pages-artifact@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy .tracker-site --project-name=s0-pipeline-tracker
+          path: .tracker-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment # the job's environment url reads page_url from this step
+        uses: actions/deploy-pages@v4

@@ -63,7 +63,8 @@ So there is a delay, but there is no *reviewer*. Nobody is obliged to read your 
 
 - **Never write the string "HMP" into any file.** It is conversational shorthand for verbal CEO directives. In documents always write **"Executive Intake"**.
 - `S0/Benchmark Discipline/` is marked `visibility: internal-only`. The charter forbids publishing benchmark data externally. Never surface it in client-facing or public output.
-- Intake entries contain client names, revenue judgements, verbatim executive quotes, and per-colleague Culture scores. Treat every one as commercially confidential. The published site is access-controlled for this reason — never suggest removing that gate.
+- Intake entries contain client names, revenue judgements, verbatim executive quotes, and per-colleague Culture scores. Treat every one as commercially confidential.
+- **The published site is public. There is no authentication gate, by decision of the repo owner** — so an intake note is a public document from the moment it is published. This does not loosen the rule above, it tightens it: what protects confidential material is what you decline to write into a published note, because nothing downstream redacts it. Write every entry to be safe in front of the named client.
 
 ---
 
@@ -84,8 +85,10 @@ So there is a delay, but there is no *reviewer*. Nobody is obliged to read your 
 
 ```
 Obsidian edit → Obsidian Git auto commit-and-sync (operator-set interval)
-              → GitHub → Actions: verify → render → Cloudflare Pages (behind Access)
+              → GitHub → Actions: verify → render → GitHub Pages (public, no gate)
 ```
+
+The site is https://robertkashyap-searce.github.io/s0/ — public, and served entirely by GitHub. Nothing else is in the path.
 
 - **The only executable code is `.tools/` — `render-tracker.rb` and `markdown.rb`.** Ruby, no gems. `markdown.rb` is a hand-rolled Markdown→HTML renderer for the subset the notes actually use; no markdown gem is installed, and adding one in CI but not locally would give the two runners different output.
 - **It must stay Ruby 2.6-compatible** — macOS system Ruby has no `filter_map` and no endless method definitions (`def f(x) = …`). PyYAML is *not* installed, so use Ruby for YAML work, never Python.
@@ -94,7 +97,7 @@ Obsidian edit → Obsidian Git auto commit-and-sync (operator-set interval)
 - **The self-check asserts a fixture, not vault data.** An earlier version compared a real note's total to a constant, so every legitimate re-score failed CI. Never assert on live note values.
 - Deletions propagate — every run is a full rebuild and full-directory upload, and the renderer clears `.tracker-site/*.html` first so a retracted ask's page cannot survive locally and get re-uploaded.
 - **The site is multi-page, and the published set is an allowlist.** `index.html` holds the three tables; every intake note plus the two reference docs (`Scoring Rubric`, `Pipeline Tracker`) get their own page. `DOCS` in the renderer is that allowlist — **never turn it into a link crawl.** A crawl would follow `[[S0 Charter]]` and `[[Benchmark Discipline]]` and publish exactly what the charter forbids. A wikilink whose target isn't published renders as plain text, by design.
-- **Publishing a note publishes its entire body**, including the verbatim executive quote. Before this, only frontmatter-derived columns were visible for scored rows. Assume anything written in an intake note is readable by everyone behind the Access gate.
+- **Publishing a note publishes its entire body**, including the verbatim executive quote. Before this, only frontmatter-derived columns were visible for scored rows. There is no per-field redaction — the allowlist chooses which notes publish, never which parts of one. **Assume anything written in an intake note is readable by anyone**; the site has no gate. The renderer's `noindex,nofollow` keeps search engines off, which is not the same as keeping readers out.
 - `.gitignore` excludes `.obsidian/workspace.json` deliberately: it is rewritten on every pane switch and would trigger a deploy each time.
 
 ---

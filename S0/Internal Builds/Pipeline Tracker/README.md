@@ -81,7 +81,7 @@ Then in Obsidian: **Open folder as vault** → pick the clone.
 
 That toggle must be **off**. With it on, the timer only arms in response to edits typed in Obsidian, so changes written by Claude or any other tool never trigger a sync.
 
-Publishing setup (Cloudflare, CI secrets, access control) is already configured for this repo — see `Publishing.md` if you need to change it.
+Publishing is already configured for this repo: GitHub Actions renders the site and GitHub Pages serves it at https://robertkashyap-searce.github.io/s0/, with no third-party service and no repo secrets. **The site is public and has no sign-in** — see `Publishing.md` before writing anything into an entry you would not publish.
 
 ---
 

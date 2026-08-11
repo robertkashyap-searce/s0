@@ -71,7 +71,7 @@ The division of labour is deliberate:
 
 Six dimensions, 1–5. Five measure value; Complexity **subtracts**, so a valuable-but-disproportionately-hard ask ranks below an equally valuable cheap one.
 
-Scored entries publish to an access-controlled web view for leadership who don't open Obsidian. Rendering and deployment run in CI — no laptop in the path once a push lands.
+Scored entries publish to a read-only web view for leadership who don't open Obsidian: https://robertkashyap-searce.github.io/s0/. Rendering and deployment run in CI — no laptop in the path once a push lands. **The site is public and has no sign-in**, and publishing a note publishes its whole body — so write every intake entry as a document anyone may read. See `Publishing.md`.
 
 Full reasoning: `S0/Internal Builds/Pipeline Tracker/Pipeline Tracker.md`. Weights and anchors: `Scoring Rubric.md`. Publishing: `Publishing.md`.
 

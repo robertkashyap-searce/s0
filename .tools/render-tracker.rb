@@ -8,7 +8,7 @@
 #
 # Output is a DIRECTORY, not one file: index.html carries the three tables, and
 # every published note gets its own page so the ranking is clickable the way the
-# vault is. Cloudflare Pages deploys a directory (see publish-tracker.yml), so
+# vault is. GitHub Pages deploys a directory (see publish-tracker.yml), so
 # multiple interlinked pages need no infrastructure change.
 #
 # Usage:  ruby render-tracker.rb            # render
@@ -40,7 +40,7 @@ LABELS = {
 # never a link crawl. Every entry cites [[Scoring Rubric]], and the rubric plus
 # the operating doc are what make a score legible to someone landing on a note
 # from the ranking. Deliberately absent: Publishing.md (visibility:
-# internal-only, and it documents the access perimeter), the READMEs, and
+# internal-only), the READMEs, and
 # everything outside this folder — a crawl would drag in the charter and
 # Benchmark Discipline, which the charter forbids publishing.
 DOCS = ['Scoring Rubric', 'Pipeline Tracker'].freeze
@@ -161,46 +161,59 @@ def h(str) # macOS ships Ruby 2.6; no endless method defs
 end
 
 CSS = <<~CSS
-  :root{--bg:#fff;--fg:#1a1a1a;--dim:#666;--line:#e3e3e3;--head:#f6f6f6;--warn:#8a4b00;--warnbg:#fff6e8;--accent:#0b5fa5;--codebg:#f4f4f5}
-  @media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#ededed;--dim:#9a9a9a;--line:#2e2e2e;--head:#1f1f1f;--warn:#ffc27a;--warnbg:#2a1f10;--accent:#7fb6e8;--codebg:#202022}}
+  /* futurify.ai v0: two tones, 1px hairlines, no shadows, no third hue.
+     Type tokens are theme-independent, so they sit in their own bare :root the
+     way the design system splits typography.css from colors.css. The two colour
+     rules below MUST declare the identical six keys — a token in only one block
+     inherits the wrong value with no error. */
+  :root{color-scheme:light dark;
+        --display:"Space Grotesk","Space Grotesk Fallback",ui-sans-serif,system-ui,sans-serif;
+        --body:"Manrope","Manrope Fallback",ui-sans-serif,system-ui,sans-serif;
+        --mono:"IBM Plex Mono","IBM Plex Mono Fallback",ui-monospace,monospace}
+  :root{--bg:#faf9f6;--fg:#111110;--dim:#6f6d66;--line:#dcd9d0;--codebg:#f2f0ea;--warn:#89601f}
+  @media (prefers-color-scheme:dark){:root{--bg:#111110;--fg:#faf9f6;--dim:#9b9992;--line:#2e2d2a;--codebg:#1b1b19;--warn:#e1b66c}}
   *{box-sizing:border-box}
   body{margin:0;padding:2rem 1.25rem;background:var(--bg);color:var(--fg);
-       font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
+       font-family:var(--body);font-size:17px;line-height:1.62;overflow-x:hidden}
   main{max-width:1100px;margin:0 auto}
+  h1,h2,h3,h4{font-family:var(--display)}
   h1{font-size:1.5rem;margin:0 0 .25rem;line-height:1.25}
   h2{font-size:1.05rem;margin:2rem 0 .6rem}
   h3{font-size:.98rem;margin:1.5rem 0 .5rem}
   h4{font-size:.92rem;margin:1.2rem 0 .4rem;color:var(--dim)}
   .sub{color:var(--dim);margin:0 0 1.25rem}
-  a{color:var(--accent)}
+  a{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+  a:hover{opacity:.62}
+  :focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   .crumb{display:inline-block;margin:0 0 1rem;font-size:13px}
-  .banner{background:var(--warnbg);color:var(--warn);border:1px solid currentColor;
-          border-radius:6px;padding:.6rem .8rem;font-weight:600;margin-bottom:1.5rem}
+  .banner{background:var(--fg);color:var(--bg);border-radius:2px;
+          padding:.6rem .8rem;font-weight:600;margin-bottom:1.5rem}
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:.75rem 0}
   table{border-collapse:collapse;width:100%;font-size:14px}
   th,td{text-align:left;padding:.5rem .65rem;border-bottom:1px solid var(--line);vertical-align:top}
-  thead th{background:var(--head);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+  thead th{font-family:var(--mono);font-weight:500;font-size:12.5px;text-transform:uppercase;
+           letter-spacing:.12em;color:var(--dim);border-bottom:1px solid var(--line);white-space:nowrap}
   .ranking td,.ranking th{white-space:nowrap}
   .ranking td:first-child,.ranking th:first-child{white-space:normal;min-width:15rem}
   .score{font-weight:700;font-variant-numeric:tabular-nums}
   .empty{color:var(--dim);font-style:italic}
   blockquote{margin:1rem 0;padding:.1rem 1rem;border-left:3px solid var(--line)}
-  blockquote.callout{border-left-color:var(--warn);background:var(--warnbg);border-radius:0 6px 6px 0;padding:.6rem 1rem}
+  blockquote.callout{border-left:3px solid var(--warn);padding:.6rem 1rem}
   .callout-title{font-weight:700;margin:.2rem 0;color:var(--warn)}
-  code{background:var(--codebg);padding:.1em .35em;border-radius:3px;font-size:12.5px}
-  pre{background:var(--codebg);padding:.75rem .9rem;border-radius:6px;overflow-x:auto}
+  code{background:var(--codebg);font-family:var(--mono);padding:.1em .35em;border-radius:2px;font-size:12.5px}
+  pre{background:var(--codebg);padding:.75rem .9rem;border-radius:2px;overflow-x:auto}
   pre code{background:none;padding:0;font-size:12.5px;line-height:1.45}
   del{color:var(--dim)}
   ul,ol{padding-left:1.4rem}
   li{margin:.3rem 0}
   hr{border:0;border-top:1px solid var(--line);margin:1.75rem 0}
   .cards{display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0 1.25rem}
-  .card{border:1px solid var(--line);border-radius:6px;padding:.35rem .6rem;font-size:12.5px;white-space:nowrap}
+  .card{border:1px solid var(--line);border-radius:2px;padding:.35rem .6rem;font-size:12.5px;white-space:nowrap}
   .card b{font-variant-numeric:tabular-nums}
   footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
 CSS
 
-BANNER = 'Internal &amp; commercially confidential — do not forward or share this link.'
+BANNER = 'Internal &amp; commercially confidential. This site is public — treat anything written in an intake note as world-readable.'
 
 def page(title, body, footer)
   <<~HTML

@@ -125,7 +125,7 @@ Two views: **Priority ranking** (scored items, sorted by Overall Score, highest 
 | [[Executive Intake Entry]] | The template, in `_Templates/`. Inserted via **Templates: Insert template**. |
 | [[Executive Intake Entry (Shipped)]] | Retrospective template, same folder. For work already delivered — scores Complexity on what it *actually* cost, which is how the rubric gets calibrated. |
 | `Intake/` | One note per ask. Each note is one row. Data only — no templates, no examples. |
-| [[Publishing]] | Read-only web view for leadership. Setup + the access-control gate. |
+| [[Publishing]] | Read-only web view for leadership. Setup, and what publishing a whole note body means on a public site. |
 
 ## If the Overall column shows an error
 

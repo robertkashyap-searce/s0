@@ -45,7 +45,7 @@ Three scoring dimensions were requested. Six shipped.
 | — | **Urgency**, weight 0.15 | added |
 | — | [[Scoring Rubric]] — 1–5 anchors for all six dimensions | added |
 | — | Slot vocabulary: Now / Next / Blocked | added |
-| — | Published web view behind Cloudflare Access | added |
+| — | Published web view | added |
 | — | CI that refuses to deploy a ranking it cannot verify | added |
 
 **The number worth carrying into the recalibration: 0.55 of the 1.00 value weight comes from dimensions nobody asked for.** Strategic 0.20 + Impact 0.20 + Urgency 0.15. Of the requested dimensions, ROI and Culture carry 0.45 between them; Complexity is the subtracted term rather than part of the value total.
@@ -59,12 +59,12 @@ This is not an argument that the additions are wrong — all three are defensibl
 | [[Priority Ranking.base]] | The live tracker. Formula, column set, two views. Single source of truth for the weights. |
 | [[Scoring Rubric]] | 1–5 anchors per dimension. The reason two people score alike. |
 | [[Pipeline Tracker]] | Operating doc — the flow, the model, how to run it. |
-| [[Publishing]] | Publish runbook and the access-control gate. |
+| [[Publishing]] | Publish runbook, and what publishing a whole note body means on a public site. |
 | [[Executive Intake Entry]] | Capture template for a new ask. |
 | [[Executive Intake Entry (Shipped)]] | Retrospective template. This entry is its first use. |
 | `.tools/render-tracker.rb` | Renders base + intake notes to self-contained HTML. Ruby 2.6-compatible, no gems. Parses the weights out of the `.base`. |
 | `.github/workflows/publish-tracker.yml` | verify → render → deploy on every relevant push. |
-| Cloudflare Pages site, behind Access | The leadership-visible read-only view. |
+| GitHub Pages site, public | The leadership-visible read-only view, at https://robertkashyap-searce.github.io/s0/. No sign-in; publishing an entry publishes its whole body. |
 | `CLAUDE.md` | In-repo agent harness — the division of labour that keeps scoring off the human's desk. |
 | `README.md` (root and tracker) | Entry points for anyone arriving from GitHub. |
 | `Pipeline Tracker — Executive Brief.md` | CEO-facing brief; asks for endorsement and one hour per cycle. Kept **outside** the vault, so it is not wikilinked here. |
@@ -77,14 +77,14 @@ Anchors: [[Scoring Rubric]].
 - **Strategic Alignment — 3.** Anchor 3: *"fits a charter slice cleanly"* — the Internal Builds 20%. **Not 4**, because anchor 4 names four frontier workstreams ([[Frontier Radar]], [[Benchmark Discipline]], [[Architecture Hub]], [[Field Response Desk]]) and this is none of them. **Contestable at 4:** this is the instrument that makes a hot-desk cap breach visible *before* it happens, which protects the sacred 40% and the charter's *"contract integrity"* success criterion. If leadership reads charter machinery as frontier-advancing, this is a 4 and the total is **2.60**. Recorded rather than quietly resolved.
 - **Client Impact — 4.** Anchor 4: *"touches a live client commitment **or an exec-level audience**."* The output is a leadership-visible page, and a dedicated brief asks the CEO for endorsement and an hour per cycle. Not 5: no client sees it and no must-win moment attaches. *Also hits the known anchor gap — public/brand visibility with no client behind it. Third entry to hit it.*
 - **Urgency — 2.** The anchor caps undated items at 2. **Verified against the board, not assumed:** the `AIOS` node carries *"ToBe — deadline 15 Aug 2026"*; the `Pipeline Tracker` node carries no date at all. Wanted soon, no fixed date.
-- **Culture — 4.** Anchor 4: *"builds capability in ≥2 people, or yields a teach-in."* The build produced working knowledge of Obsidian Bases formulas, weighted scoring with a subtracted cost term, a gem-free Ruby renderer, GitHub Actions → Cloudflare Pages, and Access gating — and the operating docs are the teach-in artifact. **Contestable at 3:** if one person built it alone and nobody else has since touched it, anchor 4's *"≥2 people"* fails, this becomes a 3 (*"produces a documented pattern"*), and the total drops to **2.25**. A human should settle this; the artifacts cannot.
+- **Culture — 4.** Anchor 4: *"builds capability in ≥2 people, or yields a teach-in."* The build produced working knowledge of Obsidian Bases formulas, weighted scoring with a subtracted cost term, a gem-free Ruby renderer, and a CI path that renders and deploys a static site unattended — and the operating docs are the teach-in artifact. *(The host and the gating it carried at build time have since been retired for GitHub Pages with no gate. Score unchanged: the capability the build produced was the pipeline, not the vendor.)* **Contestable at 3:** if one person built it alone and nobody else has since touched it, anchor 4's *"≥2 people"* fails, this becomes a 3 (*"produces a documented pattern"*), and the total drops to **2.25**. A human should settle this; the artifacts cannot.
 - **Complexity — 2.** Anchor 2: *"~2 days."* Evidenced from git: first commit 2026-08-10, last substantive commit 2026-08-11, 14 commits of which roughly 10 are substantive — the `vault backup:` commits are Obsidian Git's timer, not work. **The anchor's other half does not hold:** the path was *not* known. Obsidian Publish cannot render Bases (confirmed by Obsidian staff, 10 Oct 2025), so a renderer had to be written rather than a product configured. Scored on realised duration; that tension is itself a finding, below.
 
 **Overall = 2.40.** Band 1.5–2.5: *"weak, or valuable-but-expensive."*
 
 ### Complexity: what the anchors would have predicted vs what it cost
 
-- **Anchors would have supported 4 at ask-time** — *"multi-week. Real unknowns or external dependencies."* Three external dependencies (Obsidian Bases, GitHub Actions, Cloudflare Access) is anchor 4's literal condition, and the central question — *can this ranking be published at all?* — had no known answer. **This figure is reconstructed now; nobody recorded an estimate at the time.**
+- **Anchors would have supported 4 at ask-time** — *"multi-week. Real unknowns or external dependencies."* Three external dependencies (Obsidian Bases, GitHub Actions, and the third-party host and auth gate used at the time) is anchor 4's literal condition, and the central question — *can this ranking be published at all?* — had no known answer. **This figure is reconstructed now; nobody recorded an estimate at the time.**
 - **Actual, evidenced: 2.** Two calendar days, ten substantive commits, every dependency navigated without a surviving blocker.
 - **Delta: 2 points, worth 0.50 on the Overall.** What it says about the anchors: they conflate *number of dependencies* with *cost*. Three well-documented SaaS dependencies cost less than one undocumented one. Dependency count is a poor proxy; what predicts cost is whether each dependency has a documented happy path. **Proposed anchor revision:** score Complexity on unknowns *without documented answers*, not on how many external systems are involved.
 
@@ -96,9 +96,11 @@ Anchors: [[Scoring Rubric]].
 | Weights cannot drift between site and vault | Renderer parses the coefficients *out of* the `.base` formula rather than duplicating them | **Verified by construction** |
 | Half-scored rows stay unscored | `--check` asserts `compute_overall` returns nil rather than totalling to 0 | **Verified** |
 | Retractions disappear from the site | Full rebuild and full-directory upload on every run | **Verified** |
-| The page is not publicly readable | Unauthenticated external request | **Verified** — returns an auth challenge, not the data |
+| Only the allowlisted notes reach the page | `DOCS` in the renderer is a declared list — `Intake/*.md` plus two reference docs — and an off-list wikilink renders as plain text rather than a link | **Verified by construction** |
 | The path works unattended | Changed one score, observed it reach the published page with no manual step | **Verified** |
 | The Overall column renders inside Obsidian | — | **Not verified.** The website was checked; the in-Obsidian base formula column was not. Carried as a limit, not a pass. |
+
+**Amended 2026-08-12.** This table previously carried a row recording that the page was not publicly readable. **Hosting has since moved to GitHub Pages and the site is public by decision of the repo owner**, so that row was retired rather than left standing as a false pass. The allowlist row above is what is verifiable now.
 
 Two findings are worth keeping, because they are why the result is trustworthy. First, the automated check originally asserted against a **live note**, so every legitimate re-score registered as a mismatch and blocked publication — correct behaviour looked like a fault. It was repointed at a fixture. Found by validation, not by a user. Second, the system **stops rather than publishing what it cannot verify**: a failed check leaves the previous version visible. A ranking one cycle stale is recoverable; a wrong one is not.
 
@@ -116,8 +118,8 @@ Two findings are worth keeping, because they are why the result is trustworthy. 
 - **Assessment capacity is the ceiling,** at roughly fifteen requests a cycle. Recording never stops; assessment is what queues, and queue depth is the signal for a capacity conversation.
 - **Staying current needs a device.** The site stays *live* unattended; getting an edit into GitHub needs something that has synced.
 - **The whole vault sits in a third-party private repo,** including [[Benchmark Discipline]], which is marked internal-only. A private repo is not publication, but it is a third party holding it. Revisit if that reading tightens.
-- **No redaction layer.** Correct while readers are internal. If readers ever widen to clients this needs a redaction pass first — a client reading their own ROI score of 2 is an incident, not a transparency win.
-- **Culture scores are visible to the people they describe.** Fine among squad members if that is intended; it should be a deliberate yes, not a surprise.
+- **No redaction layer, and readers are not internal.** *(Amended 2026-08-12: this limit previously read "correct while readers are internal" and treated a widening to clients as hypothetical. The site is now on GitHub Pages with no gate, so the readership has already widened to anyone.)* The redaction pass has to happen in the note body at writing time, because there is no layer downstream to do it — a client reading their own ROI score of 2 is an incident, not a transparency win.
+- **Culture scores are visible to the people they describe, and to everyone else.** *(Amended 2026-08-12: previously scoped to squad members.)* Per-colleague reasoning about a named colleague publishes verbatim to a public page; it should be a deliberate yes from the writer, not a surprise to the person named.
 - **The renderer aborts rather than skips on a blank score** in any row whose status is not `Awaiting scoring`. It fails safe and loud — by design, a stale ranking beats a wrong one — but the failure surfaces as a Ruby type error rather than a message naming the offending row.
 - **The base excludes templates by exact filename,** so every new template carrying the `executive-intake` tag needs its own exclusion line or it appears as a phantom row in Obsidian.
 
