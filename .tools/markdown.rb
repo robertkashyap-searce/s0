@@ -259,7 +259,7 @@ module Markdown
     # across arbitrary prose and terminated at the NEXT wikilink's alias pipe;
     # the bogus target then missed the allowlist and the unresolved branch emitted
     # only the label, silently deleting every character in between.
-    s = s.gsub(/\[\[([^\]\[|]+)(?:\|([^\]\[]+))?\]\]/) do
+    s = s.gsub(/!?\[\[([^\]\[|]+)(?:\|([^\]\[]+))?\]\]/) do
       target = Regexp.last_match(1).strip
       label  = (Regexp.last_match(2) || target).strip
       href   = links[target]

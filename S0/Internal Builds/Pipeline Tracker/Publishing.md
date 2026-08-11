@@ -25,7 +25,7 @@ A live, read-only web view of [[Priority Ranking.base]] for leadership and S0 me
 > changes how the site is *discovered*, not who may read it.
 >
 > The consequence is for what gets written, not for the hosting: **an intake note
-> is a public document from the moment `status: Scored` lands.** See the
+> is a public document from the moment the `executive-intake` tag lands — capture publishes it; scoring only moves which table it appears in. The Awaiting-scoring table prints the `verbatim` on the index.** See the
 > confidentiality callout below before typing a verbatim.
 
 > [!warning] The note body is the disclosure surface

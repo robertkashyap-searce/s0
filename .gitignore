@@ -11,3 +11,8 @@
 # Obsidian's local trash and macOS cruft
 .trash/
 .DS_Store
+
+# Retired Cloudflare Pages deploy. Its cache held an account id, account name and
+# the old project name in a tracked file on a public repo; ignored so a future
+# wrangler run cannot re-add them.
+.wrangler/

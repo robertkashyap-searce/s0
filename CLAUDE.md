@@ -45,7 +45,7 @@ Use `/score-ask` (see `.claude/commands/`), or follow it manually:
 
 ### Publishing is periodic, and unattended
 
-`status: Scored` puts the row on a leadership-visible website (see §4) at the **next publish cycle**. The operator sets that interval on Obsidian Git's commit-and-sync timer — it may be minutes, it may be eight hours. **Never assume a value; read the plugin setting if it matters to what you're doing.**
+The `executive-intake` tag puts the note on a leadership-visible website (see §4) at the **next publish cycle** — from **capture**, not from scoring. `status` only selects which table it lands in: `Awaiting scoring` still publishes the note page **and prints the `verbatim` on the index**; `Scored` moves it into the ranking; `Shipped`/`Done` into the Shipped table. **There is no private drafting window.** The operator sets that interval on Obsidian Git's commit-and-sync timer — it may be minutes, it may be eight hours. **Never assume a value; read the plugin setting if it matters to what you're doing.**
 
 So there is a delay, but there is no *reviewer*. Nobody is obliged to read your scores before leadership does. Consequences you must respect:
 
@@ -93,7 +93,7 @@ The site is https://robertkashyap-searce.github.io/s0/ — public, and served en
 - **The only executable code is `.tools/` — `render-tracker.rb` and `markdown.rb`.** Ruby, no gems. `markdown.rb` is a hand-rolled Markdown→HTML renderer for the subset the notes actually use; no markdown gem is installed, and adding one in CI but not locally would give the two runners different output.
 - **It must stay Ruby 2.6-compatible** — macOS system Ruby has no `filter_map` and no endless method definitions (`def f(x) = …`). PyYAML is *not* installed, so use Ruby for YAML work, never Python.
 - **Run `ruby .tools/render-tracker.rb --check` after touching the renderer or the weights.** It must print `OK`. CI runs the same check and refuses to deploy if it fails — a stale ranking beats a wrong one.
-- **Weights are parsed out of `Priority Ranking.base`**, never hardcoded in the renderer. This is deliberate: two implementations of one ranking would eventually disagree about what is #1. Never hardcode weights to "simplify".
+- **Weights are parsed out of `Priority Ranking.base`**, never hardcoded in the renderer for the render itself — but `--check` deliberately **pins** the six coefficients in `expect`, so a reweight must update that table in the same commit or CI refuses to deploy. This is deliberate: two implementations of one ranking would eventually disagree about what is #1. Never hardcode weights to "simplify".
 - **The self-check asserts a fixture, not vault data.** An earlier version compared a real note's total to a constant, so every legitimate re-score failed CI. Never assert on live note values.
 - Deletions propagate — every run is a full rebuild and full-directory upload, and the renderer clears `.tracker-site/*.html` first so a retracted ask's page cannot survive locally and get re-uploaded.
 - **The site is multi-page, and publication is opt-in from the note.** `index.html` holds the three tables; every published note gets its own page. Two gates, both frontmatter tags, both read through `tag_list`:

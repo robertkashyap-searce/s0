@@ -1,8 +1,10 @@
 #!/usr/bin/env ruby
 # Renders the Pipeline Tracker to a small static site.
 #
-# Weights are parsed OUT of Priority Ranking.base so the .base file stays the
-# single source of truth. Change a weight in Obsidian and the site follows.
+# Weights are parsed OUT of Priority Ranking.base, so the .base file is the single
+# source of truth for the RENDER. --check additionally PINS the six coefficients
+# (see `expect`), so a deliberate reweight is a two-file change by design: edit the
+# .base, then update `expect` and the fixture total, or CI refuses to deploy.
 # Full rebuild every run, so deletions propagate (an unpublished retraction
 # staying live was the top disclosure risk raised in review).
 #
@@ -28,7 +30,6 @@ TRACKER = File.join(VAULT, 'S0', 'Internal Builds', 'Pipeline Tracker')
 BASE    = File.join(TRACKER, 'Priority Ranking.base')
 INTAKE  = File.join(TRACKER, 'Intake')
 SITE    = File.join(VAULT, '.tracker-site')
-OUT     = File.join(SITE, 'index.html')
 
 FIELDS = %w[roi strategic impact urgency culture complexity].freeze
 LABELS = {
@@ -36,13 +37,6 @@ LABELS = {
   'urgency' => 'Urgency', 'culture' => 'Culture', 'complexity' => 'Complexity'
 }.freeze
 
-# Reference pages published alongside the intake notes. This is an ALLOWLIST,
-# never a link crawl. Every entry cites [[Scoring Rubric]], and the rubric plus
-# the operating doc are what make a score legible to someone landing on a note
-# from the ranking. Deliberately absent: Publishing.md (visibility:
-# internal-only), the READMEs, and
-# everything outside this folder — a crawl would drag in the charter and
-# Benchmark Discipline, which the charter forbids publishing.
 # Publication is opt-in from the NOTE, not from this file. Tag a doc in the
 # tracker folder with this and it publishes on the next push, inheriting the
 # whole template — no code change. Untag it and it stops. That is the same gate
@@ -66,7 +60,7 @@ DONE = %w[Shipped Done].freeze
 
 AWAITING = 'Awaiting scoring'
 
-# --- weights: parsed from the .base formula, never hardcoded here -------------
+# --- weights: parsed from the .base for the render; pinned in --check --------
 def load_weights
   formula = YAML.load_file(BASE).dig('formulas', 'overall')
   abort "FATAL: no 'overall' formula in #{BASE}" unless formula
@@ -597,7 +591,7 @@ def awaiting_table(rows)
 end
 
 def index_page(rows, docs, weights, stamp, pages)
-  # Built from the docs actually LOADED, never from the tag filter. Building
+  # Built from the docs actually LOADED. Building it from a static list of names
   # it from the constant emitted a link to a page that was never written when a
   # reference doc had been renamed or removed — a 404 a reader finds by clicking.
   reference =
@@ -607,9 +601,13 @@ def index_page(rows, docs, weights, stamp, pages)
       items = docs.map { |d| %(<li><a href="#{d[:href]}">#{h(d[:name])}</a></li>) }.join
       "<h2>Reference</h2>\n<ul>#{items}</ul>"
     end
-  awaiting = rows.select { |r| r[:status] == AWAITING }
-  shipped  = rows.select { |r| DONE.include?(r[:status]) }.sort_by { |r| -(r[:overall] || -99) }
-  ranked   = rows.reject { |r| r[:status] == AWAITING || DONE.include?(r[:status]) }
+  # Compare downcased, as status_pill does. Compared exactly, `status: shipped`
+  # got the right pill and still landed in the Priority ranking table.
+  st = ->(r) { r[:status].to_s.downcase }
+  done_set = DONE.map(&:downcase)
+  awaiting = rows.select { |r| st.call(r) == AWAITING.downcase }
+  shipped  = rows.select { |r| done_set.include?(st.call(r)) }.sort_by { |r| -(r[:overall] || -99) }
+  ranked   = rows.reject { |r| st.call(r) == AWAITING.downcase || done_set.include?(st.call(r)) }
                  .sort_by { |r| -(r[:overall] || -99) }
   formula  = FIELDS.map { |f| format('%+g·%s', weights[f], LABELS[f]) }.join(' ')
 
