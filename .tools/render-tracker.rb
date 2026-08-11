@@ -160,6 +160,61 @@ def h(str) # macOS ships Ruby 2.6; no endless method defs
   CGI.escapeHTML(str.to_s)
 end
 
+# Every published note opens with a `# Title` that repeats the title this
+# renderer already emits, so the doc pages rendered two identical 42px headlines
+# with the banner wedged between them. Strips only a LEADING h1; mid-body
+# headings are untouched.
+def strip_leading_h1(body)
+  body.to_s.sub(/\A(?:\s*\n)*\#\s+.*\n/, '')
+end
+
+# Mermaid needs a JavaScript renderer to draw a graph, and this site makes zero
+# external requests — vendoring one would be megabytes for a single diagram.
+# But every flowchart in the vault is a LINEAR chain, and a linear chain is just
+# a numbered sequence, which is readable and needs no library at all.
+#
+# So: parse that one shape and emit real markup for it. Anything else returns nil
+# and keeps its verbatim block, because a half-drawn graph is worse than source.
+def mermaid_to_flow(src)
+  body = src.to_s
+  return nil unless body =~ /\A\s*flowchart\s+(?:LR|RL|TD|TB)\b/
+
+  nodes = {}
+  body.scan(/([A-Za-z0-9_]+)\[([^\]]+)\]/) { |id, label| nodes[id] = label }
+  edges = body.scan(/([A-Za-z0-9_]+)\s*--+>\s*([A-Za-z0-9_]+)/)
+  return nil if nodes.empty? || edges.empty?
+
+  froms = edges.map { |e| e[0] }
+  tos   = edges.map { |e| e[1] }
+  # Linear means each node has at most one edge in and one out. A fan-out or a
+  # join is a real graph and must not be flattened into a false sequence.
+  return nil unless froms.uniq.size == froms.size && tos.uniq.size == tos.size
+
+  cursor = (froms - tos).first
+  return nil unless cursor
+
+  nxt = Hash[edges]
+  order = [cursor]
+  order << (cursor = nxt[cursor]) while nxt[cursor]
+  return nil unless order.size == nodes.size
+
+  steps = order.each_with_index.map do |id, i|
+    parts = nodes[id].to_s.split(%r{<br\s*/?>}).map { |s| h(s.strip) }
+    title = parts.shift.to_s
+    sub   = parts.empty? ? '' : %(<span class="flow-s">#{parts.join(' ')}</span>)
+    %(<li><span class="flow-n">#{format('%02d', i + 1)}</span><span class="flow-t">#{title}</span>#{sub}</li>)
+  end
+  %(<ol class="flow">#{steps.join}</ol>)
+end
+
+# Post-processes rendered HTML. Runs after Markdown.render because the mermaid
+# body arrives HTML-escaped inside the preformatted block.
+def enrich(html)
+  html.gsub(%r{<pre class="lang-mermaid"><code>(.*?)</code></pre>}m) do
+    mermaid_to_flow(CGI.unescapeHTML(Regexp.last_match(1))) || Regexp.last_match(0)
+  end
+end
+
 CSS = <<~CSS
   /* ---------------------------------------------------------------------------
      futurify.ai v0 — the tracker's entire stylesheet, one coherent sheet.
@@ -270,6 +325,12 @@ CSS = <<~CSS
       border-radius:2px;font-family:var(--mono);font-size:11px;font-weight:500;
       text-transform:uppercase;letter-spacing:.12em;padding:7px 12px;min-height:32px;cursor:pointer}
   .tt:hover{color:var(--fg);border-color:var(--fg)}
+  /* The button says which mode it switches TO. The mark is a quilt cell split
+     paper/ink, so it reads as a light-dark control without an icon set — this
+     identity ships none. */
+  .tt-m{display:inline-block;width:9px;height:9px;margin-right:7px;
+        background:linear-gradient(135deg,currentColor 0 50%,transparent 50% 100%);
+        border:1px solid currentColor;border-radius:1px;vertical-align:-1px}
 
   /* The confidentiality notice runs full bleed on the ink plane — the identity's
      loudest surface. The inner padding keeps its text on main's column. */
@@ -336,9 +397,26 @@ CSS = <<~CSS
   .callout-title{font-weight:700;margin:.2rem 0;color:var(--dim)}
   code{background:var(--codebg);border:1px solid var(--line);font-family:var(--mono);
        padding:.1em .35em;border-radius:2px;font-size:.84em}
+  /* Formulae live in these blocks, so they are set large enough to read as
+     notation rather than as a code dump, and they WRAP instead of scrolling —
+     a formula that runs off the right edge is not readable at all. */
   pre{background:var(--codebg);border:1px solid var(--line);padding:1.125rem 1.25rem;
       border-radius:2px;margin:1.375rem 0;overflow-x:auto}
-  pre code{background:none;border:0;padding:0;font-size:12.5px;line-height:1.7}
+  pre code{background:none;border:0;padding:0;font-size:15px;line-height:1.8;
+           white-space:pre-wrap;overflow-wrap:break-word}
+
+  /* A linear mermaid flowchart, rendered as the numbered sequence it actually is.
+     Mermaid's own renderer is a JS library this site will not load; a chain needs
+     no library. Non-linear diagrams keep their source block instead. */
+  .flow{list-style:none;display:grid;gap:1px;padding:0;margin:1.25rem 0 2rem;
+        max-width:none;background:var(--line);border:1px solid var(--line);border-radius:2px;
+        grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .flow li{background:var(--bg);padding:.9rem 1rem;display:flex;flex-direction:column;gap:3px}
+  .flow-n{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.14em;
+          color:var(--dim)}
+  .flow-t{font-family:var(--display);font-size:15px;font-weight:600;letter-spacing:-.01em;
+          line-height:1.2}
+  .flow-s{font-size:13px;color:var(--dim);line-height:1.4}
 
   footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--line);
          color:var(--dim);font-size:14px;max-width:78ch}
@@ -382,17 +460,19 @@ def page(title, body, footer)
     <script>(function(){try{var s=localStorage.getItem("s0-theme");if(s){document.documentElement.setAttribute("data-theme",s)}}catch(e){}})();</script>
     <style>#{CSS}</style></head><body>
     <div class="masthead"><span class="mark" aria-hidden="true"></span><span class="wm">S0 &middot; Internal Builds</span>
-    <button class="tt" id="tt" type="button" aria-label="Switch between light and dark">Theme</button></div>
+    <button class="tt" id="tt" type="button"><span class="tt-m" aria-hidden="true"></span><span id="ttl">Dark</span> mode</button></div>
     <main>
     #{body}
     <footer>#{footer}</footer>
     </main>
     <div class="quilt-band" aria-hidden="true"></div>
-    <script>(function(){var r=document.documentElement,b=document.getElementById("tt");if(!b){return}
-    b.addEventListener("click",function(){
-    var cur=r.getAttribute("data-theme")||(window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
-    var nxt=cur==="dark"?"light":"dark";r.setAttribute("data-theme",nxt);
-    try{localStorage.setItem("s0-theme",nxt)}catch(e){}});})();</script>
+    <script>(function(){var r=document.documentElement,b=document.getElementById("tt"),l=document.getElementById("ttl");if(!b){return}
+    function now(){return r.getAttribute("data-theme")||(window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light")}
+    function label(){var t=now()==="dark"?"Light":"Dark";if(l){l.textContent=t}
+    b.setAttribute("aria-label","Switch to "+t.toLowerCase()+" mode")}
+    label();
+    b.addEventListener("click",function(){var nxt=now()==="dark"?"light":"dark";
+    r.setAttribute("data-theme",nxt);try{localStorage.setItem("s0-theme",nxt)}catch(e){}label()});})();</script>
     </body></html>
   HTML
 end
@@ -519,7 +599,7 @@ def note_page(row, links, stamp)
     <h1>#{h(row[:name])}</h1>
     <div class="banner">#{BANNER}</div>
     <div class="cards">#{score_cards(row)}</div>
-    #{Markdown.render(row[:body], links)}
+    #{enrich(Markdown.render(strip_leading_h1(row[:body]), links))}
   HTML
   page("#{row[:name]} — Pipeline Tracker", body,
        "Generated #{h(stamp)} · Executive Intake entry.")
@@ -530,7 +610,7 @@ def doc_page(doc, links, stamp)
     <a class="crumb" href="index.html">&larr; Priority ranking</a>
     <h1>#{h(doc[:name])}</h1>
     <div class="banner">#{BANNER}</div>
-    #{Markdown.render(doc[:body], links)}
+    #{enrich(Markdown.render(strip_leading_h1(doc[:body]), links))}
   HTML
   page("#{doc[:name]} — Pipeline Tracker", body, "Generated #{h(stamp)} · Reference.")
 end
