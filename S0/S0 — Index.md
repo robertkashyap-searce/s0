@@ -35,6 +35,7 @@ Map of content for the S0 squad (R&I, under the futurify/Searce banner). Canonic
 
 ## Instruments
 - [[Pipeline Tracker]] — how Executive Intake asks get captured, researched, scored on six dimensions, and auto-ranked so priority is arithmetic rather than volume. Lives under [[Internal Builds]].
+- [[Brain — Index]] — distilled knowledge harness. Raw material dropped into `Brain/_Dump/` (gitignored, never leaves the machine) is ingested by `/distill` into linked concept notes, one Source Ledger per dump. Sits at the vault root as a sibling to `S0/`, not under it: the material it holds serves any squad, and the charter reserves `S{n}/` for squads.
 
 ## Related org concepts
 - S0 has organizational alignment with **Forward Deployed Engineers (FDE)** elsewhere in the brand org (per user, 2026-08-10) — not defined in [[S0 Charter]] itself; worth cross-referencing if/when an FDE-side note lands in this vault.

@@ -16,3 +16,10 @@
 # the old project name in a tracked file on a public repo; ignored so a future
 # wrangler run cannot re-add them.
 .wrangler/
+
+# Raw source material dropped for /distill, and the originals it archives after
+# ingesting them. This repo is public and Obsidian Git commits on a timer, so a
+# dump would reach GitHub before anyone thought to remove it — and history would
+# keep it afterwards. Brain/Nodes/ and Brain/_Sources/ ARE tracked: the distilled
+# node is the durable artifact, the paste is not.
+Brain/_Dump/
