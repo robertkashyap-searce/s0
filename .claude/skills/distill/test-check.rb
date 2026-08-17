@@ -147,6 +147,41 @@ MUTATIONS = {
       t.sub("### Connections\n- The dump ties the ship date to a legal sign-off. (F002)\n", '') } }],
 }
 
+# Valid inputs that the checker WRONGLY REJECTED before 2026-08-16, each proving one
+# fix. MUTATIONS prove the checker fires on defects; these prove it does not fire on
+# correct work. A checker that red-flags valid work gets disabled by its operator,
+# which is the same as having no checker at all.
+REGRESSIONS = {
+  'RANGEB bound "up to" is reachable' => lambda { |d|
+    # DERIVE rejected "up" and "least", so two of RANGEB's five legal bound values
+    # could never pass. SCAFF now carries both.
+    edit("#{d}/ledger.md") { |t|
+      t.sub('| F001 | L1 | NUM | Pricing is 40k USD per year. | = |',
+            '| F001 | L1 | RANGE | Pricing is 40k USD per year; bound: up to | Pricing is 40k USD per year. |') }
+    edit("#{d}/nodes/Pricing.md") { |t|
+      t.gsub('Pricing is 40k USD per year.', 'Pricing is 40k USD per year; bound: up to') } },
+
+  'US in an anchor is not first person' => lambda { |d|
+    # PRONOUN matched \bus\b case-insensitively, so the country code in a patent
+    # citation failed a fact containing no first person at all.
+    File.write("#{d}/source.txt", "US Section 101 pricing is 40k USD per year.\nWe ship by Q3 if legal signs off.\n")
+    edit("#{d}/ledger.md") { |t|
+      t.sub('| F001 | L1 | NUM | Pricing is 40k USD per year. | = |',
+            '| F001 | L1 | NUM | pricing is 40k USD per year | US Section 101 pricing is 40k USD per year. |') }
+    edit("#{d}/nodes/Pricing.md") { |t|
+      t.gsub('Pricing is 40k USD per year.', 'pricing is 40k USD per year') } },
+
+  'an escaped pipe matches its own fact' => lambda { |d|
+    # PROSE unpiped the fact side but not the body side, so a fact containing a
+    # literal pipe could never match itself and always reported as authored prose.
+    File.write("#{d}/source.txt", "Pricing is 40k USD per year | list price.\nWe ship by Q3 if legal signs off.\n")
+    edit("#{d}/ledger.md") { |t|
+      t.sub('| F001 | L1 | NUM | Pricing is 40k USD per year. | = |',
+            '| F001 | L1 | NUM | Pricing is 40k USD per year \| list price. | = |') }
+    edit("#{d}/nodes/Pricing.md") { |t|
+      t.gsub('Pricing is 40k USD per year.', 'Pricing is 40k USD per year \| list price.') } },
+}
+
 fails = []
 
 Dir.mktmpdir('distill-test') do |tmp|
@@ -182,10 +217,24 @@ Dir.mktmpdir('distill-test') do |tmp|
       puts "     got: #{out.lines.map(&:strip).reject(&:empty?).first(2).join(' / ')}"
     end
   end
+
+REGRESSIONS.each do |label, apply|
+  d = "#{tmp}/reg"
+  build(d)
+  apply.call(d)
+  out = `ruby #{checker} #{d} 2>&1`
+  if $?.success? && out.include?('OK')
+    puts "ok   valid input accepted: #{label}"
+  else
+    fails << "regression: #{label}"
+    puts "FAIL valid input rejected: #{label}"
+    puts "     got: #{out.lines.map(&:strip).reject(&:empty?).first(3).join(' / ')}"
+  end
+end
 end
 
 if fails.empty?
-  puts "\nOK — #{MUTATIONS.size + 2} assertions passed"
+  puts "\nOK — #{MUTATIONS.size + REGRESSIONS.size + 2} assertions passed"
 else
   puts "\n#{fails.size} FAILED:"
   fails.each { |f| puts "  - #{f}" }

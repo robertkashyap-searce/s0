@@ -18,8 +18,33 @@
 .wrangler/
 
 # Raw source material dropped for /distill, and the originals it archives after
-# ingesting them. This repo is public and Obsidian Git commits on a timer, so a
-# dump would reach GitHub before anyone thought to remove it — and history would
-# keep it afterwards. Brain/Nodes/ and Brain/_Sources/ ARE tracked: the distilled
-# node is the durable artifact, the paste is not.
+# ingesting them. This keeps the paste, its formatting and its original filename
+# out of a public repo that auto-commits on a timer.
+#
+# It does NOT keep dump *content* private, and an earlier version of this comment
+# wrongly implied it did. Brain/Nodes/ is tracked, and check.rb's FACTTEXT rule
+# requires every atomic fact to appear in its node verbatim — so the content of a
+# dump is published even though the dump file never is. Confidentiality is decided
+# at drop time by whoever puts the file here. Nothing downstream redacts it.
 Brain/_Dump/
+
+# Source Ledgers, per operator decision 2026-08-16. The ledger's Anchor column is
+# exact substrings of the dump, and it carries the removals log and undefined-terms
+# apparatus, so it stays on this machine.
+# The cost, accepted knowingly: a clone loses the losslessness audit trail. The
+# Sources column of Brain — Index and every node's `sources:` link will not resolve
+# for anyone else, and Obsidian renders an unresolved wikilink as plain text.
+# .gitkeep stays tracked so the folder itself survives a clone.
+Brain/_Sources/*
+!Brain/_Sources/.gitkeep
+
+# Temporary run digest. Gitignored on purpose: it carries the confidentiality
+# analysis, the doctrine-vs-record divergence table and pre-announcement material.
+# Delete this line to publish it.
+tempfindings.md
+
+# Decision sheet for the open calls the distiller cannot make. Same reason as the
+# digest above: it names the pre-announcement sessions, quotes both sides of the
+# doctrine-vs-record divergences, and restates the confidentiality posture.
+# Delete this line to publish it.
+decisions-open.md
